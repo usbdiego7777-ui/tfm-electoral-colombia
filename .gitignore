@@ -1,0 +1,22 @@
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Cache de Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Datos pesados (los ficheros >30MB no van al repo, ver README)
+datos/raw/MMV_NACIONAL_PRESIDENTE_2022_1v.csv
+datos/raw/MMV_NACIONAL_PRESIDENTE_2022_2v.csv
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Configuración local (rutas de máquina, credenciales, etc.)
+.env
