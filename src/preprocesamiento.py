@@ -20,7 +20,8 @@ CODIGO_LISTA_IZQUIERDA = {
     2010: 5,   # Gustavo Petro (Polo)
     2014: 1,   # Clara Lopez (Polo)
     2018: 1,   # Gustavo Petro (Colombia Humana)
-    # 2022 se añade con su propio script de agregacion mesa -> municipio
+    # 2022 usa un formato distinto (nivel mesa, columnas CAN/PAR) -> ver
+    # agregacion_2022.py. Gustavo Petro (Pacto Historico): CAN='006', PAR='1235'
 }
 
 # Codigos especiales que NO son votos a un candidato real
@@ -139,3 +140,51 @@ def construir_serie_izquierda(rutas_por_ano: dict, encoding: str = "latin1") -> 
 
     serie = pd.concat(resultados, ignore_index=True)
     return serie
+
+
+# ------------------------------------------------------------------------
+# 2. Variable lag: % de izquierda de la eleccion INMEDIATAMENTE anterior
+#    en el mismo municipio. Se calcula por merge explicito año->año anterior
+#    (no por shift posicional), para evitar desalineaciones si un municipio
+#    no tiene fila en algun año (ej. municipios nuevos o sin dato ese año).
+#    Esto GARANTIZA que nunca se cruza la frontera train/test: el lag de
+#    2022 solo puede venir de 2018, nunca de 2022 ni de años futuros.
+# ------------------------------------------------------------------------
+ANO_ANTERIOR = {
+    2006: 2002,
+    2010: 2006,
+    2014: 2010,
+    2018: 2014,
+    2022: 2018,
+}
+
+
+def calcular_variable_lag(panel: pd.DataFrame) -> pd.DataFrame:
+    """
+    Dado el panel completo (una fila por municipio y año, con columna
+    'pct_izquierda'), devuelve solo las filas de los AÑOS OBJETIVO
+    (2006, 2010, 2014, 2018, 2022 - los que sí tienen bloque de izquierda
+    consolidado) con una columna nueva 'lag_pct_izquierda': el % de
+    izquierda que tuvo ESE MISMO municipio en la eleccion anterior.
+
+    Municipios sin fila en el año anterior (ej. municipios de creacion
+    reciente) quedan con lag_pct_izquierda = NaN - hay que revisarlos en
+    el paso de verificacion de calidad, no imputar a ciegas.
+    """
+    resultados = []
+    for ano_objetivo, ano_anterior in ANO_ANTERIOR.items():
+        actual = panel[panel["ano"] == ano_objetivo].copy()
+        anterior = (
+            panel[panel["ano"] == ano_anterior][["divipola", "pct_izquierda"]]
+            .rename(columns={"pct_izquierda": "lag_pct_izquierda"})
+        )
+        actual = actual.merge(anterior, on="divipola", how="left")
+        resultados.append(actual)
+
+    panel_con_lag = pd.concat(resultados, ignore_index=True)
+
+    n_sin_lag = panel_con_lag["lag_pct_izquierda"].isna().sum()
+    if n_sin_lag > 0:
+        print(f"AVISO: {n_sin_lag} filas sin lag disponible (municipio sin dato en el año anterior). Revisar en verificacion de calidad.")
+
+    return panel_con_lag
