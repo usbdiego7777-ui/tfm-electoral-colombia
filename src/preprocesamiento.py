@@ -143,12 +143,22 @@ def construir_serie_izquierda(rutas_por_ano: dict, encoding: str = "latin1") -> 
 
 
 # ------------------------------------------------------------------------
-# 2. Variable lag: % de izquierda de la eleccion INMEDIATAMENTE anterior
-#    en el mismo municipio. Se calcula por merge explicito año->año anterior
-#    (no por shift posicional), para evitar desalineaciones si un municipio
-#    no tiene fila en algun año (ej. municipios nuevos o sin dato ese año).
-#    Esto GARANTIZA que nunca se cruza la frontera train/test: el lag de
-#    2022 solo puede venir de 2018, nunca de 2022 ni de años futuros.
+# 2. Variable(s) lag: valor de una columna en la eleccion INMEDIATAMENTE
+#    anterior, en el mismo municipio. Se calcula por merge explicito
+#    año->año anterior (no por shift posicional), para evitar
+#    desalineaciones si un municipio no tiene fila en algun año (ej.
+#    municipios nuevos o sin dato ese año). Esto GARANTIZA que nunca se
+#    cruza la frontera train/test: el lag de 2022 solo puede venir de
+#    2018, nunca de 2022 ni de años futuros.
+#
+# IMPORTANTE (correccion metodologica, revision cruzada de otros chats del
+# proyecto): pct_votos_blanco DEL MISMO AÑO no puede usarse como predictor,
+# porque se determina en la misma urna y al mismo tiempo que pct_izquierda
+# - no es informacion disponible "antes" del resultado. Se calcula tambien
+# su lag (lag_pct_votos_blanco) para usar como predictor; el pct_votos_blanco
+# del año en curso queda solo como variable DESCRIPTIVA para el EDA, nunca
+# como feature del modelo (ver COLUMNAS_PREDICTORAS / COLUMNAS_DESCRIPTIVAS
+# mas abajo).
 # ------------------------------------------------------------------------
 ANO_ANTERIOR = {
     2006: 2002,
@@ -159,32 +169,92 @@ ANO_ANTERIOR = {
 }
 
 
-def calcular_variable_lag(panel: pd.DataFrame) -> pd.DataFrame:
+def calcular_lag_variable(panel: pd.DataFrame, columna: str, nombre_lag: str = None) -> pd.DataFrame:
     """
-    Dado el panel completo (una fila por municipio y año, con columna
-    'pct_izquierda'), devuelve solo las filas de los AÑOS OBJETIVO
-    (2006, 2010, 2014, 2018, 2022 - los que sí tienen bloque de izquierda
-    consolidado) con una columna nueva 'lag_pct_izquierda': el % de
-    izquierda que tuvo ESE MISMO municipio en la eleccion anterior.
-
-    Municipios sin fila en el año anterior (ej. municipios de creacion
-    reciente) quedan con lag_pct_izquierda = NaN - hay que revisarlos en
-    el paso de verificacion de calidad, no imputar a ciegas.
+    Version generica: calcula el lag de CUALQUIER columna del panel (ej.
+    'pct_izquierda' o 'pct_votos_blanco'), devolviendo solo las filas de
+    los AÑOS OBJETIVO con una columna nueva 'lag_<columna>' (o el nombre
+    que se indique en nombre_lag).
     """
+    nombre_lag = nombre_lag or f"lag_{columna}"
     resultados = []
     for ano_objetivo, ano_anterior in ANO_ANTERIOR.items():
         actual = panel[panel["ano"] == ano_objetivo].copy()
         anterior = (
-            panel[panel["ano"] == ano_anterior][["divipola", "pct_izquierda"]]
-            .rename(columns={"pct_izquierda": "lag_pct_izquierda"})
+            panel[panel["ano"] == ano_anterior][["divipola", columna]]
+            .rename(columns={columna: nombre_lag})
         )
         actual = actual.merge(anterior, on="divipola", how="left")
         resultados.append(actual)
+    return pd.concat(resultados, ignore_index=True)
 
-    panel_con_lag = pd.concat(resultados, ignore_index=True)
 
-    n_sin_lag = panel_con_lag["lag_pct_izquierda"].isna().sum()
-    if n_sin_lag > 0:
-        print(f"AVISO: {n_sin_lag} filas sin lag disponible (municipio sin dato en el año anterior). Revisar en verificacion de calidad.")
+def calcular_variable_lag(panel: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calcula lag_pct_izquierda Y lag_pct_votos_blanco en un solo paso, e
+    imputa los casos sin lag disponible (municipio sin fila en el año
+    anterior: municipios muy remotos con 0 votos, o municipios de creacion
+    reciente) con la MEDIA DEPARTAMENTAL de ese mismo año objetivo -no con
+    cero ni con la media nacional, que distorsionarian mas-. Cada
+    imputacion queda marcada con una bandera explicita, nunca oculta.
 
-    return panel_con_lag
+    OJO: ambos lags se calculan por separado A PARTIR DEL PANEL ORIGINAL
+    (que incluye 1998-2022), no de forma encadenada, porque
+    calcular_lag_variable() ya filtra su resultado a solo los años
+    objetivo - encadenar perderia el año de referencia (ej. 2002) para el
+    segundo calculo.
+    """
+    con_lag_izq = calcular_lag_variable(panel, "pct_izquierda", "lag_pct_izquierda")
+    con_lag_blanco = calcular_lag_variable(panel, "pct_votos_blanco", "lag_pct_votos_blanco")
+
+    resultado = con_lag_izq.merge(
+        con_lag_blanco[["divipola", "ano", "lag_pct_votos_blanco"]],
+        on=["divipola", "ano"], how="left",
+    )
+
+    for columna_lag in ["lag_pct_izquierda", "lag_pct_votos_blanco"]:
+        col_imputado = f"{columna_lag}_imputado"
+        resultado[col_imputado] = resultado[columna_lag].isna().astype(int)
+        media_departamental = (
+            resultado.groupby(["departamento", "ano"])[columna_lag].transform("mean")
+        )
+        resultado[columna_lag] = resultado[columna_lag].fillna(media_departamental)
+        # Si ni siquiera hay otros municipios del departamento con lag ese año
+        # (caso extremo), se deja NaN para que no pase desapercibido en el
+        # paso de verificacion de calidad, en vez de forzar un valor.
+        n_imputados = resultado[col_imputado].sum()
+        n_aun_sin_valor = resultado[columna_lag].isna().sum()
+        if n_imputados > 0:
+            print(f"AVISO: {n_imputados} filas de '{columna_lag}' imputadas con la media departamental del año (marcadas en '{col_imputado}').")
+        if n_aun_sin_valor > 0:
+            print(f"AVISO: {n_aun_sin_valor} filas de '{columna_lag}' SIGUEN sin valor tras imputar (ni el departamento tenia dato ese año) - revisar a mano.")
+
+    # Peso muestral sugerido para el modelado (sklearn sample_weight): usar
+    # votos_totales_emitidos en vez de excluir municipios de baja votacion.
+    # Un municipio con 10 votos totales pesa mucho menos en el ajuste que
+    # uno con 50.000, sin descartarlo del analisis de residuos - ahi se
+    # debe distinguir explicitamente "residuo alto con votacion robusta" de
+    # "residuo extremo con pocos votos" (paso de analisis de residuos, no
+    # de preprocesamiento).
+    resultado["peso_muestral"] = resultado["votos_totales_emitidos"]
+
+    return resultado
+
+
+# Columnas que SI pueden usarse como predictoras en el modelo (disponibles
+# antes de conocer el resultado de la eleccion objetivo)
+COLUMNAS_PREDICTORAS = [
+    "lag_pct_izquierda", "lag_pct_izquierda_imputado",
+    "lag_pct_votos_blanco", "lag_pct_votos_blanco_imputado",
+    # NBI, PER_OCU, etc. se añaden en pasos posteriores de integracion
+]
+
+# Columnas que son descriptivas o de diagnostico, NUNCA features del modelo
+# (se determinan en la misma eleccion que se quiere predecir, o son
+# variables de identificacion/peso)
+COLUMNAS_DESCRIPTIVAS_NO_PREDICTORAS = [
+    "pct_votos_blanco",       # del año EN CURSO - misma urna que el objetivo
+    "votos_validos", "votos_izquierda", "votos_blanco", "votos_nulos",
+    "votos_totales_emitidos", "num_candidatos",
+    "peso_muestral",          # se usa como sample_weight, no como feature
+]
