@@ -96,9 +96,19 @@ streamlit run app/streamlit_app.py
 | NBI Censo 2018 | [DANE](https://www.dane.gov.co/files/censo2018/informacion-tecnica/CNPV-2018-NBI.xlsx) | Municipio | DANE — datos abiertos, uso libre |
 | IPM 2018–2022 | [DANE](https://www.dane.gov.co/files/investigaciones/condiciones_vida/pobreza/2022/anexo_dptal_pobreza_multidimensional_2022.xlsx) | Departamento | DANE — datos abiertos, uso libre |
 
-Los ficheros originales de resultados electorales de 2022 a nivel de mesa (>30MB) no se versionan
-en este repositorio; se agregan a nivel municipal mediante `src/preprocesamiento.py` y el
-resultado agregado sí se incluye en `datos/procesados/`.
+Los ficheros originales de resultados electorales de 2022 a nivel de mesa, y el fichero original de
+víctimas del conflicto (>30MB cada uno), superan el límite de tamaño de GitHub y no se versionan en
+este repositorio. Están disponibles, tal como recomienda la guía del máster, en una carpeta de
+Google Drive con acceso de lectura para cualquier persona con el enlace:
+
+**[Carpeta de datos originales pesados (Google Drive)](https://drive.google.com/drive/folders/10MmaVe-ESKJQQPAvStOXWBVO4JbcNVuT?usp=sharing)**
+
+Contiene:
+- `VICTIMAS_DEPARTAMENTAL.csv` (original, 2,5GB) — se transforma con `src/filtrar_victimas.py`, cuyo resultado (`VICTIMAS_FILTRADO_V2.csv`) sí está en `datos/procesados/`
+- `MMV_NACIONAL_PRESIDENTE_2022_1v.csv` (131MB) y `_2v.csv` (64MB) — se agregan a nivel municipal con `src/agregacion_2022.py`, cuyo resultado sí está en `datos/procesados/`
+
+El resto de ficheros originales (resultados electorales 1998-2018, NBI 2005 y 2018, IPM, registro de
+fuentes) sí están versionados en `datos/raw/` de este repositorio, al ser de tamaño reducido.
 
 El análisis detallado de licencias de cada fuente se incluye en la sección de Datos de la memoria
 del TFM (no solo en este README).
