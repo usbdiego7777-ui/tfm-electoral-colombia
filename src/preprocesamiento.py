@@ -255,14 +255,19 @@ def calcular_variable_lag(panel: pd.DataFrame) -> pd.DataFrame:
         if n_aun_sin_valor > 0:
             print(f"AVISO: {n_aun_sin_valor} filas de '{columna_lag}' SIGUEN sin valor tras imputar (ni el departamento tenia dato ese año) - revisar a mano.")
 
-    # Peso muestral sugerido para el modelado (sklearn sample_weight): usar
-    # votos_totales_emitidos en vez de excluir municipios de baja votacion.
-    # Un municipio con 10 votos totales pesa mucho menos en el ajuste que
-    # uno con 50.000, sin descartarlo del analisis de residuos - ahi se
-    # debe distinguir explicitamente "residuo alto con votacion robusta" de
-    # "residuo extremo con pocos votos" (paso de analisis de residuos, no
-    # de preprocesamiento).
-    resultado["peso_muestral"] = resultado["votos_totales_emitidos"]
+    # Peso muestral para el modelado (sklearn sample_weight): normalizado con
+    # un tope U=500 votos, en vez de usar votos_totales_emitidos en crudo.
+    # CORRECCION (revision cruzada con el chat principal y el chat validador
+    # del proyecto): usar el conteo crudo como peso daba una influencia
+    # desproporcionada a municipios enormes (Bogota, Medellin, con millones
+    # de votos) frente al resto, sin aportar nada mas alla de "tambien tiene
+    # voto confiable" - lo mismo que un municipio de 500 votos. La formula
+    # peso_muestral = min(votos_totales_emitidos / 500, 1.0) da:
+    #   - peso = 1.0 (confiabilidad plena) a partir de 500 sufragios
+    #   - peso proporcional, entre 0 y 1, por debajo de ese umbral
+    # verificado: 128 filas (2.28%) reciben peso < 1.0 con este umbral.
+    UMBRAL_PESO_MUESTRAL = 500
+    resultado["peso_muestral"] = (resultado["votos_totales_emitidos"] / UMBRAL_PESO_MUESTRAL).clip(upper=1.0)
 
     return resultado
 

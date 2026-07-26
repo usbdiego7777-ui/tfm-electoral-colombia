@@ -53,6 +53,18 @@ def construir_panel_sintetico() -> pd.DataFrame:
             "votos_totales_emitidos": 500,
         })
 
+    # TEST3: votacion baja (100 votos), por debajo del tope de 500 -> debe
+    # dar peso proporcional (100/500 = 0.2), no peso pleno
+    valores_test3 = {2002: 5, 2006: 8, 2010: 12, 2014: 18, 2018: 22, 2022: 30}
+    blanco_test3 = {2002: 0.5, 2006: 0.8, 2010: 1.2, 2014: 1.8, 2018: 2.2, 2022: 3.0}
+    for ano, val in valores_test3.items():
+        filas.append({
+            "divipola": "TEST3", "ano": ano, "departamento": "DEPTO_X",
+            "municipio": "MUNICIPIO_TEST3",
+            "pct_izquierda": val, "pct_votos_blanco": blanco_test3[ano],
+            "votos_totales_emitidos": 100,
+        })
+
     return pd.DataFrame(filas)
 
 
@@ -115,13 +127,26 @@ def test_municipio_sin_dato_en_ano_anterior_queda_imputado_y_marcado():
     assert t2.loc[2022, "lag_pct_izquierda_imputado"] == 0
 
 
-def test_peso_muestral_existe_y_es_igual_a_votos_totales():
-    """El peso muestral debe existir y coincidir con votos_totales_emitidos,
-    para poder usarse directamente como sample_weight en sklearn sin
-    necesidad de excluir municipios de baja votacion."""
+def test_peso_muestral_usa_formula_con_tope_500():
+    """El peso muestral debe ser min(votos_totales_emitidos/500, 1.0): pleno
+    (1.0) para votaciones robustas, proporcional para las muy pequeñas."""
     panel = construir_panel_sintetico()
     resultado = calcular_variable_lag(panel)
-    assert (resultado["peso_muestral"] == resultado["votos_totales_emitidos"]).all()
+    esperado = (resultado["votos_totales_emitidos"] / 500).clip(upper=1.0)
+    assert (resultado["peso_muestral"] == esperado).all()
+
+    # TEST1 tiene votos_totales_emitidos=1000 (por encima del tope) -> peso pleno
+    t1 = resultado[resultado["divipola"] == "TEST1"]
+    assert (t1["peso_muestral"] == 1.0).all()
+
+    # TEST2 tiene votos_totales_emitidos=500 (justo en el tope) -> peso pleno tambien
+    t2 = resultado[resultado["divipola"] == "TEST2"]
+    assert (t2["peso_muestral"] == 1.0).all()
+
+    # TEST3 tiene votos_totales_emitidos=100 (por debajo del tope) -> peso
+    # proporcional (100/500 = 0.2), NUNCA pleno
+    t3 = resultado[resultado["divipola"] == "TEST3"]
+    assert (t3["peso_muestral"] == 0.2).all()
 
 
 if __name__ == "__main__":
@@ -129,7 +154,7 @@ if __name__ == "__main__":
         test_lag_coincide_con_el_valor_real_del_ano_anterior,
         test_lag_de_votos_blanco_tambien_se_calcula_correctamente,
         test_municipio_sin_dato_en_ano_anterior_queda_imputado_y_marcado,
-        test_peso_muestral_existe_y_es_igual_a_votos_totales,
+        test_peso_muestral_usa_formula_con_tope_500,
     ]
     for t in tests:
         t()

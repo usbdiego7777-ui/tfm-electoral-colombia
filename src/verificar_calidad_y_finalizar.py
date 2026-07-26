@@ -45,14 +45,20 @@ def estandarizar_nombres(panel: pd.DataFrame, ruta_referencia: str) -> pd.DataFr
 
 def marcar_confiabilidad_electoral(panel: pd.DataFrame, umbral_votos: int = 30) -> pd.DataFrame:
     """
-    Añade 'baja_confiabilidad_electoral' (1 si peso_muestral < umbral_votos,
-    0 en caso contrario). NO excluye filas - solo marca, para que el
-    modelado (ponderacion) y el analisis de residuos (interpretacion) usen
-    la señal con criterio, en vez de que la decision quede escondida aqui.
-    Umbral acordado con el usuario: 30 votos totales emitidos.
+    Añade 'baja_confiabilidad_electoral' (1 si votos_totales_emitidos <
+    umbral_votos, 0 en caso contrario). NO excluye filas - solo marca, para
+    que el modelado (ponderacion) y el analisis de residuos (interpretacion)
+    usen la señal con criterio, en vez de que la decision quede escondida
+    aqui. Umbral acordado con el usuario: 30 votos totales emitidos.
+
+    OJO: se compara contra 'votos_totales_emitidos' (el conteo real de
+    votos), NO contra 'peso_muestral' - esta ultima esta normalizada con
+    tope en [0, 1] (ver formula peso_muestral = min(votos/500, 1.0)), asi
+    que comparaciones directas contra un umbral en escala de votos (30)
+    darian TODAS las filas como baja confiabilidad si se comparara mal.
     """
     panel = panel.copy()
-    panel["baja_confiabilidad_electoral"] = (panel["peso_muestral"] < umbral_votos).astype(int)
+    panel["baja_confiabilidad_electoral"] = (panel["votos_totales_emitidos"] < umbral_votos).astype(int)
     n_marcados = panel["baja_confiabilidad_electoral"].sum()
     print(f"{n_marcados} filas marcadas con baja_confiabilidad_electoral=1 (menos de {umbral_votos} votos totales emitidos).")
     return panel
