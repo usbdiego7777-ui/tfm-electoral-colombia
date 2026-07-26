@@ -178,13 +178,18 @@ def graficar_correlaciones_por_departamento(
         f"(color tenue = menos de {min_municipios_solido} municipios, correlación frágil)"
     )
 
-    # Anotar n de municipios al final de cada barra
+    # Anotar n de municipios ANCLADO AL CERO (no al extremo de la barra):
+    # con barras negativas muy largas (ej. Boyacá, Cundinamarca), poner la
+    # etiqueta en la punta de la barra la empuja fuera del margen izquierdo
+    # o encima del nombre del departamento. Ancladas al cero, todas las
+    # etiquetas quedan en una franja central legible, sin salirse nunca.
     xmin, xmax = ax.get_xlim()
-    margen = (xmax - xmin) * 0.02
+    margen = (xmax - xmin) * 0.01
     for i, (depto, fila) in enumerate(resultado.iterrows()):
-        x_texto = fila["correlacion"] + margen if fila["correlacion"] >= 0 else fila["correlacion"] - margen
-        alineacion = "left" if fila["correlacion"] >= 0 else "right"
-        ax.text(x_texto, i, f"n={int(fila['n_municipios'])}", va="center", ha=alineacion, fontsize=7)
+        if fila["correlacion"] >= 0:
+            ax.text(-margen, i, f"n={int(fila['n_municipios'])}", va="center", ha="right", fontsize=7)
+        else:
+            ax.text(margen, i, f"n={int(fila['n_municipios'])}", va="center", ha="left", fontsize=7)
 
     plt.tight_layout()
     if ruta_salida:
