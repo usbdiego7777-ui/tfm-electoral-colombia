@@ -272,15 +272,19 @@ def calcular_variable_lag(panel: pd.DataFrame) -> pd.DataFrame:
 COLUMNAS_PREDICTORAS = [
     "lag_pct_izquierda", "lag_pct_izquierda_imputado",
     "lag_pct_votos_blanco", "lag_pct_votos_blanco_imputado",
-    # NBI, PER_OCU, etc. se añaden en pasos posteriores de integracion
+    "nbi_total",   # NBI municipal (2005 para 1998-2010, 2018 para 2014-2022)
+    "per_ocu",     # PER_OCU departamental del MISMO año electoral (ver src/integrar_victimas.py)
 ]
 
 # Columnas que son descriptivas o de diagnostico, NUNCA features del modelo
 # (se determinan en la misma eleccion que se quiere predecir, o son
-# variables de identificacion/peso)
+# variables de identificacion/peso/calidad)
 COLUMNAS_DESCRIPTIVAS_NO_PREDICTORAS = [
     "pct_votos_blanco",       # del año EN CURSO - misma urna que el objetivo
     "votos_validos", "votos_izquierda", "votos_blanco", "votos_nulos",
     "votos_totales_emitidos", "num_candidatos",
     "peso_muestral",          # se usa como sample_weight, no como feature
+    "fuente_nbi",             # metadato (que censo se uso), no predictor
+    "baja_confiabilidad_electoral",  # bandera de calidad, no predictor
+    "valido_para_modelado",   # filtro de filas, no predictor (excluir donde =0)
 ]
