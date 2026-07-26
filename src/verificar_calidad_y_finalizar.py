@@ -11,11 +11,36 @@
 import pandas as pd
 
 
-def estandarizar_nombres(panel: pd.DataFrame, ruta_referencia: str) -> pd.DataFrame:
+def construir_tabla_nombres_canonicos(ruta_2018: str, encoding: str = "latin1") -> pd.DataFrame:
+    """
+    Construye la tabla de nombres canonicos (divipola -> departamento,
+    municipio) directamente desde el fichero electoral de 2018, que ya se
+    usa como referencia DIVIPOLA en el resto del proyecto (ver
+    src/agregacion_2022.py). Se genera en memoria a partir del fichero
+    fuente versionado en datos/raw/ - NUNCA depende de un CSV auxiliar
+    suelto sin versionar (correccion de un vacio de reproducibilidad
+    detectado al construir el notebook 01_preprocesamiento.ipynb: la
+    version anterior de esta funcion leia un 'nombres_canonicos.csv' que
+    nunca llego a subirse al repositorio).
+    """
+    ref = pd.read_csv(ruta_2018, encoding=encoding)
+    ref = ref[["codmpio", "departamento", "municipio"]].drop_duplicates(subset="codmpio")
+    ref["divipola"] = ref["codmpio"].astype(int).astype(str).str.zfill(5)
+    return ref[["divipola", "departamento", "municipio"]]
+
+
+def estandarizar_nombres(panel: pd.DataFrame, ruta_referencia_2018: str) -> pd.DataFrame:
     """
     Reemplaza 'departamento' y 'municipio' del panel por el nombre CANONICO
     (tomado del fichero de 2018, ya usado como referencia de DIVIPOLA en
     otras partes del proyecto), para TODOS los años.
+
+    ruta_referencia_2018: ruta al fichero electoral CRUDO de 2018 (el mismo
+    que se usa en src/agregacion_2022.py como referencia), NO a un CSV
+    auxiliar pre-construido - la tabla canonica se genera en memoria con
+    construir_tabla_nombres_canonicos(), para que el pipeline completo sea
+    reproducible desde los ficheros fuente de datos/raw/ sin depender de
+    ningun artefacto intermedio sin versionar.
 
     HALLAZGO que motiva esta funcion: se detectaron 232 codigos DIVIPOLA
     cuyo nombre de departamento y/o municipio varia segun el año (ej. "VALLE"
@@ -27,7 +52,7 @@ def estandarizar_nombres(panel: pd.DataFrame, ruta_referencia: str) -> pd.DataFr
     departamento/municipio en el EDA o en Streamlit separaria erroneamente
     un mismo territorio en dos categorias distintas.
     """
-    ref = pd.read_csv(ruta_referencia, dtype={"divipola": str})
+    ref = construir_tabla_nombres_canonicos(ruta_referencia_2018)
     ref = ref.rename(columns={"departamento": "departamento_canonico", "municipio": "municipio_canonico"})
 
     panel = panel.merge(ref, on="divipola", how="left")

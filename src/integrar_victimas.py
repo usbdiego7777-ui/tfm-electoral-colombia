@@ -71,4 +71,10 @@ def integrar_victimas(panel: pd.DataFrame, ruta_victimas: str) -> pd.DataFrame:
         print(sin_fila.to_string())
         panel_con_victimas["per_ocu"] = panel_con_victimas["per_ocu"].fillna(0)
 
+    # 'coddpto_str' es un helper interno solo para el merge por codigo de
+    # departamento - nunca debe filtrarse al dataset final (se detecto que
+    # se colaba en la version anterior de este pipeline, corregido aqui en
+    # el origen para que la limpieza no dependa de un paso manual externo).
+    panel_con_victimas = panel_con_victimas.drop(columns=["coddpto_str"])
+
     return panel_con_victimas
