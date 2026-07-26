@@ -292,4 +292,130 @@ COLUMNAS_DESCRIPTIVAS_NO_PREDICTORAS = [
     "fuente_nbi",             # metadato (que censo se uso), no predictor
     "baja_confiabilidad_electoral",  # bandera de calidad, no predictor
     "valido_para_modelado",   # filtro de filas, no predictor (excluir donde =0)
+    "region_dane",            # etiqueta de navegacion/narrativa (EDA, app), NO predictor por defecto
 ]
+
+
+# ------------------------------------------------------------------------
+# 3. Enriquecimiento derivado: region natural DANE
+#    Añadida DURANTE el Chat 4 (EDA), al detectar heterogeneidad territorial
+#    en la relacion NBI-voto que se diluye al agregar por region pero es
+#    real a nivel departamento. Se implementa AQUI (preprocesamiento), no
+#    en el notebook de EDA, para mantener una unica fuente de verdad del
+#    dataset maestro (ver bitacora Fase 2, seccion 4.7-4.8).
+#
+#    Mapeo por CODIGO DIVIPOLA de departamento (2 primeros digitos de
+#    'divipola'), NUNCA por el nombre de texto de 'departamento' - la
+#    misma razon por la que el casado de fuentes ya se hace por DIVIPOLA
+#    y no por nombre (ver seccion 27.1 de la bitacora de Fase 1: nombres
+#    inconsistentes entre años, ej. "VALLE" vs "VALLE DEL CAUCA").
+#    Codigos verificados contra el dataset real (33 combinaciones
+#    codigo-nombre, sin duplicados) antes de escribir este diccionario.
+# ------------------------------------------------------------------------
+MAPA_REGION_DANE = {
+    # Andina
+    "05": "Andina",       # Antioquia
+    "15": "Andina",       # Boyaca
+    "17": "Andina",       # Caldas
+    "25": "Andina",       # Cundinamarca (incluye Bogota D.C.)
+    "41": "Andina",       # Huila
+    "54": "Andina",       # Norte de Santander
+    "63": "Andina",       # Quindio
+    "66": "Andina",       # Risaralda
+    "68": "Andina",       # Santander
+    "73": "Andina",       # Tolima
+    "11": "Andina",       # Bogota D.C.
+    # Caribe (incluye San Andres y Providencia - ver nota mas abajo)
+    "08": "Caribe",       # Atlantico
+    "13": "Caribe",       # Bolivar
+    "20": "Caribe",       # Cesar
+    "23": "Caribe",       # Cordoba
+    "44": "Caribe",       # La Guajira
+    "47": "Caribe",       # Magdalena
+    "70": "Caribe",       # Sucre
+    "88": "Caribe",       # San Andres, Providencia y Santa Catalina (CORREGIDO, ver nota)
+    # Pacifica
+    "27": "Pacifica",     # Choco
+    "76": "Pacifica",     # Valle del Cauca
+    "19": "Pacifica",     # Cauca (confirmado explicitamente por el usuario)
+    "52": "Pacifica",     # Narino (confirmado explicitamente por el usuario)
+    # Orinoquia
+    "81": "Orinoquia",    # Arauca
+    "85": "Orinoquia",    # Casanare
+    "50": "Orinoquia",    # Meta
+    "99": "Orinoquia",    # Vichada
+    # Amazonia
+    "91": "Amazonia",     # Amazonas
+    "18": "Amazonia",     # Caqueta
+    "94": "Amazonia",     # Guainia
+    "95": "Amazonia",     # Guaviare
+    "86": "Amazonia",     # Putumayo
+    "97": "Amazonia",     # Vaupes
+    # Insular: NO tiene ningun codigo de departamento asignado a proposito.
+    # Ver nota de correccion mas abajo.
+}
+
+# NOTA DE CORRECCION (revision con el usuario, contrastada contra multiples
+# fuentes: Colombia Travel, Parques Nacionales de Colombia, Twinkl, Señal
+# Colombia, todacolombia.com, IGAC): la region "Insular" de Colombia
+# corresponde a las islas oceanicas alejadas del territorio continental,
+# tanto en el mar Caribe (San Andres y Providencia) como en el Pacifico
+# (Gorgona, Malpelo). Administrativamente, sin embargo, San Andres y
+# Providencia se lista de forma consistente dentro de la region CARIBE en
+# la convencion mayoritaria (confirmado en 4+ fuentes independientes) - la
+# etiqueta "Insular" en las clasificaciones divulgativas se refiere al
+# CONCEPTO geografico de islas oceanicas, no es una categoria administrativa
+# separada con departamento propio en la practica.
+#
+# Por eso, en este mapeo (que va por CODIGO DE DEPARTAMENTO, la unidad real
+# de nuestros datos): San Andres (codigo 88) se clasifica como CARIBE, no
+# Insular. La region "Insular" queda definida conceptualmente pero SIN
+# NINGUN codigo de departamento asignado, porque Gorgona y Malpelo son
+# islas deshabitadas sin DIVIPOLA municipal propio - administrativamente
+# pertenecen al municipio de Buenaventura, departamento del Valle del Cauca
+# (ya clasificado como Pacifica). Es decir: 'Insular' tendra SIEMPRE 0 filas
+# en este dataset, y eso es correcto, no un error - no hay ninguna
+# observacion electoral que deba caer ahi.
+#
+# Version anterior (corregida): esta funcion clasificaba San Andres como
+# "Insular" en la version original de esta columna (Chat 4, 26/07/2026),
+# antes de la revision con multiples fuentes. Corregido el mismo dia tras
+# aportar el usuario una fuente cruzada explicita.
+
+
+def anadir_region_dane(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Añade la region natural de Colombia (Andina, Caribe, Pacifica,
+    Orinoquia, Amazonia) a partir del codigo DIVIPOLA de departamento.
+
+    NOTA: "Insular" existe como concepto geografico (islas oceanicas como
+    Gorgona/Malpelo, sin DIVIPOLA municipal propio) pero nunca aparecera
+    como valor real en esta columna con los datos de este proyecto - ver
+    la nota de correccion junto a MAPA_REGION_DANE. San Andres se clasifica
+    como Caribe, la convencion mayoritaria confirmada contra multiples
+    fuentes (Colombia Travel, Parques Nacionales, Twinkl, Señal Colombia).
+
+    Mapeo oficial y fijo, NO depende de los valores de los datos (no hay
+    riesgo de leakage temporal). Se mapea por codigo (2 primeros digitos
+    de 'divipola'), nunca por el nombre de texto de 'departamento', para
+    evitar el mismo problema de inconsistencia de nombres ya documentado
+    en el casado de fuentes (Fase 1, seccion 27.1).
+
+    region_dane es una columna DESCRIPTIVA/de navegacion (EDA, app), no
+    entra en COLUMNAS_PREDICTORAS por defecto. Si en el Chat 5 se decide
+    usarla o su interaccion con NBI como feature, es una decision de
+    modelado consciente y separada, no algo que se cuele por existir aqui.
+    """
+    df = df.copy()
+    codigo_dpto = df["divipola"].astype(str).str.zfill(5).str[:2]
+    df["region_dane"] = codigo_dpto.map(MAPA_REGION_DANE)
+
+    # Salvaguarda: si algun departamento queda sin region asignada, que
+    # el script falle de forma ruidosa, no que meta un NaN en silencio.
+    sin_region = df[df["region_dane"].isna()]
+    assert sin_region.empty, (
+        f"Hay {len(sin_region)} filas con codigo de departamento sin region "
+        f"asignada en MAPA_REGION_DANE: "
+        f"{sorted(sin_region['divipola'].astype(str).str[:2].unique())}"
+    )
+    return df
