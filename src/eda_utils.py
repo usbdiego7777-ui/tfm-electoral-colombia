@@ -122,3 +122,36 @@ def graficar_relacion_predictora_target(
     plt.show()
 
     return df[columna_x].corr(df["pct_izquierda"])
+
+
+def graficar_correlaciones_por_departamento(
+    df: pd.DataFrame, columna_x: str, ruta_salida: str = None, min_filas: int = 10
+) -> pd.Series:
+    """
+    Grafico de barras horizontales con la correlacion de 'columna_x' contra
+    el target, una barra por departamento, ordenadas de mas negativa a mas
+    positiva. Pensado para mostrar heterogeneidad territorial (ej. NBI-voto)
+    de forma directa - un scatter con miles de puntos superpuestos no
+    comunica un cambio de signo, un ranking de barras si.
+
+    Solo incluye departamentos con al menos 'min_filas' observaciones con
+    ambas variables no nulas, para no reportar correlaciones inestables con
+    muestras minusculas.
+    """
+    def _correlacion(g):
+        return g[columna_x].corr(g["pct_izquierda"]) if g["pct_izquierda"].notna().sum() >= min_filas else np.nan
+
+    correlaciones = df.groupby("departamento").apply(_correlacion, include_groups=False).dropna().sort_values()
+
+    colores = ["#C44E52" if v < 0 else "#55A868" for v in correlaciones]
+    fig, ax = plt.subplots(figsize=(7, 0.28 * len(correlaciones) + 1))
+    ax.barh(correlaciones.index, correlaciones.values, color=colores)
+    ax.axvline(0, color="black", linewidth=0.8)
+    ax.set_xlabel(f"Correlación {columna_x} - voto izquierda")
+    ax.set_title(f"Correlación {columna_x}-voto por departamento (n≥{min_filas})")
+    plt.tight_layout()
+    if ruta_salida:
+        plt.savefig(ruta_salida, dpi=130)
+    plt.show()
+
+    return correlaciones
