@@ -28,6 +28,19 @@ CODIGO_LISTA_IZQUIERDA = {
 CODIGOS_ESPECIALES = {997, 998, 999}  # tarjetas no marcadas, votos nulos, votos en blanco
 CODDPTO_EXTERIOR = 9  # voto de colombianos en el exterior - se excluye (sin DIVIPOLA municipal real)
 
+# Correccion de errores tipograficos REALES detectados en los ficheros
+# oficiales de la Registraduria (verificados cruzando contra los otros años
+# y contra el NBI, que coinciden entre si). Sin esta correccion, el
+# municipio queda con un codigo DIVIPOLA distinto solo en el año afectado,
+# rompiendo silenciosamente tanto el cruce con NBI/PER_OCU como el lag
+# electoral (el fallback de imputacion lo absorbe sin fallar, pero se
+# pierde informacion real que si tenemos disponible).
+# Clave: (año, codigo_incorrecto) -> codigo_correcto
+CORRECCION_CODIGOS_DIVIPOLA = {
+    (2010, 27415): 27425,  # Medio Atrato, Choco: el fichero de 2010 trae 27415;
+                           # 2006, 2014, 2018 y ambos NBI usan 27425 (correcto)
+}
+
 
 def cargar_fichero_electoral(path: str, encoding: str = "latin1", sep: str = ",") -> pd.DataFrame:
     """
@@ -38,6 +51,18 @@ def cargar_fichero_electoral(path: str, encoding: str = "latin1", sep: str = ","
     """
     df = pd.read_csv(path, encoding=encoding, sep=sep)
     df = df[df["coddpto"] != CODDPTO_EXTERIOR].copy()
+    return df
+
+
+def corregir_codigos_divipola_conocidos(df: pd.DataFrame, ano: int) -> pd.DataFrame:
+    """Aplica las correcciones de CORRECCION_CODIGOS_DIVIPOLA que apliquen a este año."""
+    df = df.copy()
+    for (ano_afectado, codigo_incorrecto), codigo_correcto in CORRECCION_CODIGOS_DIVIPOLA.items():
+        if ano == ano_afectado:
+            n_afectadas = (df["codmpio"] == codigo_incorrecto).sum()
+            if n_afectadas > 0:
+                df.loc[df["codmpio"] == codigo_incorrecto, "codmpio"] = codigo_correcto
+                print(f"  Corregido: {n_afectadas} filas de {ano} con codmpio={codigo_incorrecto} -> {codigo_correcto}")
     return df
 
 
@@ -134,6 +159,7 @@ def construir_serie_izquierda(rutas_por_ano: dict, encoding: str = "latin1") -> 
     resultados = []
     for ano, ruta in sorted(rutas_por_ano.items()):
         df_crudo = cargar_fichero_electoral(ruta, encoding=encoding)
+        df_crudo = corregir_codigos_divipola_conocidos(df_crudo, ano)
         df_ano = extraer_pct_izquierda_municipio(df_crudo, ano)
         resultados.append(df_ano)
         print(f"  {ano}: {len(df_ano)} municipios procesados")
