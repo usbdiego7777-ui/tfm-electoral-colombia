@@ -125,8 +125,9 @@ def graficar_relacion_predictora_target(
 
 
 def graficar_correlaciones_por_departamento(
-    df: pd.DataFrame, columna_x: str, ruta_salida: str = None, min_filas: int = 10
-) -> pd.Series:
+    df: pd.DataFrame, columna_x: str, ruta_salida: str = None, min_filas: int = 10,
+    min_municipios_solido: int = 8,
+) -> pd.DataFrame:
     """
     Grafico de barras horizontales con la correlacion de 'columna_x' contra
     el target, una barra por departamento, ordenadas de mas negativa a mas
@@ -134,24 +135,60 @@ def graficar_correlaciones_por_departamento(
     de forma directa - un scatter con miles de puntos superpuestos no
     comunica un cambio de signo, un ranking de barras si.
 
+    Cada barra se anota con 'n=<numero de MUNICIPIOS UNICOS>' (no filas -
+    un departamento aporta varias filas por año, pero la robustez de la
+    correlacion depende de cuantos municipios distintos la sostienen). Los
+    departamentos con menos de 'min_municipios_solido' municipios se pintan
+    con un color mas tenue (alpha reducido) para señalar visualmente que son
+    pistas sugerentes, no patrones robustos - una correlacion sobre 4-7
+    municipios puede moverse entera por un solo caso atipico.
+
     Solo incluye departamentos con al menos 'min_filas' observaciones con
     ambas variables no nulas, para no reportar correlaciones inestables con
     muestras minusculas.
+
+    Devuelve un DataFrame con columnas: correlacion, n_municipios.
     """
     def _correlacion(g):
         return g[columna_x].corr(g["pct_izquierda"]) if g["pct_izquierda"].notna().sum() >= min_filas else np.nan
 
-    correlaciones = df.groupby("departamento").apply(_correlacion, include_groups=False).dropna().sort_values()
+    correlaciones = df.groupby("departamento").apply(_correlacion, include_groups=False).dropna()
+    n_municipios = df.groupby("departamento")["divipola"].nunique()
 
-    colores = ["#C44E52" if v < 0 else "#55A868" for v in correlaciones]
-    fig, ax = plt.subplots(figsize=(7, 0.28 * len(correlaciones) + 1))
-    ax.barh(correlaciones.index, correlaciones.values, color=colores)
+    resultado = pd.DataFrame({
+        "correlacion": correlaciones,
+        "n_municipios": n_municipios.reindex(correlaciones.index),
+    }).sort_values("correlacion")
+
+    colores = []
+    for _, fila in resultado.iterrows():
+        color_base = "#C44E52" if fila["correlacion"] < 0 else "#55A868"
+        alpha = 1.0 if fila["n_municipios"] >= min_municipios_solido else 0.4
+        colores.append((color_base, alpha))
+
+    fig, ax = plt.subplots(figsize=(8.5, 0.32 * len(resultado) + 1.2))
+    for i, (depto, fila) in enumerate(resultado.iterrows()):
+        color_base, alpha = colores[i]
+        ax.barh(depto, fila["correlacion"], color=color_base, alpha=alpha)
+
     ax.axvline(0, color="black", linewidth=0.8)
     ax.set_xlabel(f"Correlación {columna_x} - voto izquierda")
-    ax.set_title(f"Correlación {columna_x}-voto por departamento (n≥{min_filas})")
+    ax.set_title(
+        f"Correlación {columna_x}-voto por departamento\n"
+        f"(color tenue = menos de {min_municipios_solido} municipios, correlación frágil)"
+    )
+
+    # Anotar n de municipios al final de cada barra
+    xmin, xmax = ax.get_xlim()
+    margen = (xmax - xmin) * 0.02
+    for i, (depto, fila) in enumerate(resultado.iterrows()):
+        x_texto = fila["correlacion"] + margen if fila["correlacion"] >= 0 else fila["correlacion"] - margen
+        alineacion = "left" if fila["correlacion"] >= 0 else "right"
+        ax.text(x_texto, i, f"n={int(fila['n_municipios'])}", va="center", ha=alineacion, fontsize=7)
+
     plt.tight_layout()
     if ruta_salida:
-        plt.savefig(ruta_salida, dpi=130)
+        plt.savefig(ruta_salida, dpi=130, bbox_inches="tight")
     plt.show()
 
-    return correlaciones
+    return resultado
