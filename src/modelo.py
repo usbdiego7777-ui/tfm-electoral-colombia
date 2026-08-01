@@ -98,11 +98,23 @@ def construir_ventana(df: pd.DataFrame, ano_test: int, columnas_predictoras: lis
 # Metricas
 # ------------------------------------------------------------------------
 def correlacion_ponderada(a, b, peso) -> float:
-    """Correlacion de Pearson ponderada por sample weight."""
+    """
+    Correlacion de Pearson ponderada por sample weight. Devuelve NaN de forma
+    explicita (sin lanzar RuntimeWarning) cuando una de las dos variables no
+    tiene varianza - por ejemplo, el baseline "media train" predice el mismo
+    valor para todos los municipios de una eleccion, asi que su varianza es 0
+    y la correlacion queda matematicamente indefinida (0/0), no es un error
+    de calculo.
+    """
     a, b, peso = np.asarray(a, float), np.asarray(b, float), np.asarray(peso, float)
     aw, bw = np.average(a, weights=peso), np.average(b, weights=peso)
-    cov = np.average((a - aw) * (b - bw), weights=peso)
     va, vb = np.average((a - aw) ** 2, weights=peso), np.average((b - bw) ** 2, weights=peso)
+    TOLERANCIA_VARIANZA_CERO = 1e-10  # el redondeo de coma flotante en el promedio
+                                       # ponderado deja varianzas residuales ~1e-16
+                                       # aun cuando la variable es constante de verdad
+    if va < TOLERANCIA_VARIANZA_CERO or vb < TOLERANCIA_VARIANZA_CERO:
+        return np.nan
+    cov = np.average((a - aw) * (b - bw), weights=peso)
     return cov / np.sqrt(va * vb)
 
 
