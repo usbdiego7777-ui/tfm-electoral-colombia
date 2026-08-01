@@ -46,6 +46,15 @@ try:
 except ImportError:
     XGBOOST_DISPONIBLE = False
 
+from sklearn.linear_model import LinearRegression
+
+# Departamentos de interes para el analisis de conflicto armado (Experimentos
+# decisivos de Fase 3): Choco, Putumayo, Narino, Caqueta, Norte de Santander,
+# Guaviare, Vaupes. Nombres verificados contra los valores reales de
+# 'departamento' en el dataset maestro (sin tildes, mayusculas).
+ZONA_CONFLICTO_DEPARTAMENTOS = ["CHOCO", "PUTUMAYO", "NARINO", "CAQUETA",
+                                 "NORTE DE SANTANDER", "GUAVIARE", "VAUPES"]
+
 
 # ------------------------------------------------------------------------
 # Columnas y ventanas de validacion (ver cabecera del fichero para el porque
@@ -281,3 +290,41 @@ def promedio_ventanas_estables(tabla_resumen: pd.DataFrame, columnas_metricas=No
         columnas_metricas = ["rmse", "mae", "r2_global", "corr_intra_anio", "r2_intra_anio"]
     sub = tabla_resumen[tabla_resumen["ventana_estable"]]
     return sub[columnas_metricas].mean()
+
+
+# ------------------------------------------------------------------------
+# Analisis explicativo (in-sample, cross-seccional) - distinto del pipeline
+# predictivo de arriba. Se usa para las preguntas de "cuanto explica X mas
+# alla de Y", no para predecir fuera de muestra. Sin regularizar (LinearRegression
+# simple): aqui interesa el R2/coeficiente insesgado dentro del propio anio,
+# no la capacidad de generalizar a anios futuros.
+# ------------------------------------------------------------------------
+def r2_ponderado(X, y, peso) -> float:
+    """R2 (ponderado) de una regresion lineal simple ajustada y evaluada sobre los MISMOS datos (in-sample)."""
+    reg = LinearRegression().fit(X, y, sample_weight=peso)
+    pred = reg.predict(X)
+    return r2_score(y, pred, sample_weight=peso)
+
+
+def correlacion_parcial_ponderada(target, control_df, variable_extra, peso):
+    """
+    Correlacion parcial ponderada de variable_extra con target, controlando por
+    las columnas de control_df. Metodo de residualizacion: se regresa target
+    contra los controles (residuo 1) y variable_extra contra los mismos
+    controles (residuo 2); la correlacion ponderada entre ambos residuos es la
+    correlacion parcial. Devuelve (correlacion, residuo_target, residuo_variable_extra)
+    para poder reusar los residuos en analisis posteriores (p.ej. comparar
+    grupos sobre el residuo del target ya controlado).
+    """
+    Xc = control_df.values if hasattr(control_df, "values") else np.asarray(control_df)
+    target = np.asarray(target, float)
+    variable_extra = np.asarray(variable_extra, float)
+
+    reg_t = LinearRegression().fit(Xc, target, sample_weight=peso)
+    resid_t = target - reg_t.predict(Xc)
+
+    reg_e = LinearRegression().fit(Xc, variable_extra, sample_weight=peso)
+    resid_e = variable_extra - reg_e.predict(Xc)
+
+    corr = correlacion_ponderada(resid_t, resid_e, peso)
+    return corr, resid_t, resid_e
