@@ -328,3 +328,123 @@ def correlacion_parcial_ponderada(target, control_df, variable_extra, peso):
 
     corr = correlacion_ponderada(resid_t, resid_e, peso)
     return corr, resid_t, resid_e
+
+
+# ------------------------------------------------------------------------
+# Fase 4 - Tabla de residuos (municipios que rompen su tendencia)
+# ------------------------------------------------------------------------
+
+COLUMNAS_TABLA_RESIDUOS = [
+    "divipola", "municipio", "departamento", "region_dane", "ano",
+    "pct_izquierda", "pct_izquierda_predicho", "residuo",
+    "lag_pct_izquierda", "nbi_total", "per_ocu",
+    "baja_confiabilidad_electoral", "peso_muestral", "votos_totales_emitidos",
+    "ventana_estable",
+]
+
+COLUMNAS_CONTEXTO_RESIDUO = [
+    "divipola", "municipio", "departamento", "region_dane", "ano",
+    "pct_izquierda", "lag_pct_izquierda", "nbi_total", "per_ocu",
+    "baja_confiabilidad_electoral", "peso_muestral", "votos_totales_emitidos",
+]
+
+
+def calcular_tabla_residuos(df: pd.DataFrame, columnas_predictoras: list,
+                             ventanas: list = None) -> pd.DataFrame:
+    """
+    Calcula la tabla de residuos out-of-sample: para cada anio de `ventanas`
+    (por defecto TODAS_LAS_VENTANAS = [2010, 2014, 2018, 2022]), entrena UN
+    MODELO NUEVO exclusivamente con anios estrictamente anteriores (ventana
+    expansiva, via entrenar_evaluar_ridge -> construir_ventana) y predice
+    SOLO ese anio de test con ESE modelo.
+
+    DECISION DE DISENO, verificada por el chat maestro y el chat de
+    validacion antes de escribir esta funcion (ver bitacora Fase 4 S9): el
+    residuo de cada anio-municipio tiene que salir del modelo entrenado sin
+    ese anio, nunca de un modelo unico entrenado con la ventana mas amplia y
+    aplicado a los 4 anios. Si se hiciera con un solo modelo, los residuos de
+    2014 y 2018 saldrian in-sample (el modelo ya vio esos anios al
+    entrenar), pareceerian razonables sin serlo, y romperian la regla
+    out-of-sample de forma silenciosa - sin ningun error visible. Por eso
+    esta funcion NUNCA entrena un modelo fuera del bucle: cada iteracion
+    llama a entrenar_evaluar_ridge() de cero, con su propio StandardScaler
+    ajustado solo con el train de esa ventana (verificado: cada llamada a
+    entrenar_evaluar_ridge crea un StandardScaler() nuevo, nunca reutiliza
+    uno global - ver esa funcion mas arriba en este mismo modulo).
+
+    2006 nunca aparece en la tabla resultante: no es anio de test de ninguna
+    ventana (es el anio con el que arranca el entrenamiento de la ventana
+    2010), asi que no tiene residuo out-of-sample posible - si apareciera,
+    seria la senal de un error de construccion (residuo in-sample colado).
+
+    2010 SI aparece, pero con ventana_estable=False: la ventana que lo
+    predice se entrena con una sola eleccion (2006), lo que la hace
+    estructuralmente debil (Fase 3: R2~=-26 en esa ventana, colapso por el
+    shock Mockus) - no es que 2010 sea un anio "malo" en si, es que el
+    modelo que lo predice no tiene suficiente historia para ser fiable. Se
+    marca, no se descarta, para que quien use la tabla decida con
+    conocimiento de causa si lo incluye o no en cada analisis.
+
+    Devuelve una tabla con las columnas de COLUMNAS_TABLA_RESIDUOS, mas dos
+    columnas auxiliares (anio_train_min, anio_train_max) que documentan,
+    fila a fila, el rango de anios de entrenamiento del modelo que genero
+    ese residuo - pensadas para la verificacion out-of-sample explicita
+    (ver notebook 04, verificacion 3).
+    """
+    if ventanas is None:
+        ventanas = TODAS_LAS_VENTANAS
+
+    bloques = []
+    for ano_test in ventanas:
+        # Entrena un modelo NUEVO, exclusivamente con anios < ano_test.
+        # Cada llamada crea su propio scaler y su propio RidgeCV - no hay
+        # reutilizacion de modelo ni de scaler entre iteraciones.
+        _, modelo, scaler, columnas_modelo = entrenar_evaluar_ridge(
+            df, ano_test, columnas_predictoras, efecto_anio=True, devolver_modelo=True
+        )
+
+        # Reconstruye la misma ventana para obtener train/test con todas las
+        # columnas de contexto (entrenar_evaluar_ridge solo devuelve metricas
+        # + modelo, no las filas de test con sus columnas descriptivas).
+        train, test, X_train, X_test = construir_ventana(
+            df, ano_test, columnas_predictoras, efecto_anio=True
+        )
+        X_test = X_test.reindex(columns=columnas_modelo, fill_value=0)
+        X_test_s = scaler.transform(X_test)
+        pred = modelo.predict(X_test_s)
+
+        bloque = test[COLUMNAS_CONTEXTO_RESIDUO].copy()
+        bloque["pct_izquierda_predicho"] = pred
+        bloque["residuo"] = bloque["pct_izquierda"] - bloque["pct_izquierda_predicho"]
+        bloque["ventana_estable"] = ano_test != VENTANA_INESTABLE
+        # Columnas auxiliares para la verificacion out-of-sample explicita
+        # (verificacion 3 del notebook 04): documentan que el modelo que
+        # genero ESTE bloque de residuos se entreno solo con estos anios.
+        bloque["anio_train_min"] = int(train["ano"].min())
+        bloque["anio_train_max"] = int(train["ano"].max())
+        bloques.append(bloque)
+
+    tabla = pd.concat(bloques, ignore_index=True)
+    tabla = tabla[COLUMNAS_TABLA_RESIDUOS + ["anio_train_min", "anio_train_max"]]
+
+    # residuo_centrado: separa la ola nacional del anio (desplazamiento comun,
+    # que el modelo basado en el pasado no puede anticipar - p.ej. el ascenso
+    # de Petro en 2022) de la desviacion territorial especifica (quien se
+    # mueve MAS que esa ola). Verificado con datos reales (chat de
+    # validacion, Fase 4): en 2022 el residuo absoluto medio es +12.6 puntos
+    # y 75.6% de los municipios son positivos - casi todo el pais sube por
+    # el efecto nacional, el mismo "error de nivel" ya documentado en Fase 3.
+    # Al centrar, el reparto pasa a 41.5% por encima / 58.5% por debajo de la
+    # media, que es el patron territorial limpio.
+    #
+    # La media de referencia se calcula SOLO sobre el subconjunto fiable
+    # (ventana_estable=True, baja_confiabilidad_electoral=0), para que ni la
+    # ventana 2010 ni los micro-electorados distorsionen la referencia. Para
+    # 2010 (ventana_estable=False) el resultado es NaN de forma deliberada -
+    # no tiene sentido centrar un residuo ya marcado como no fiable contra
+    # una media calculada excluyendolo a el mismo.
+    referencia = tabla[tabla["ventana_estable"] & (tabla["baja_confiabilidad_electoral"] == 0)]
+    media_residuo_por_anio = referencia.groupby("ano")["residuo"].mean()
+    tabla["residuo_centrado"] = tabla["residuo"] - tabla["ano"].map(media_residuo_por_anio)
+
+    return tabla
