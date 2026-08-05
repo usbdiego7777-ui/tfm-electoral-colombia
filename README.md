@@ -86,7 +86,9 @@ tfm-electoral-colombia/
 ├── .gitignore
 ├── datos/
 │   ├── raw/                    # Datos originales livianos (versionados en git)
-│   └── procesados/             # Dataset maestro integrado y datasets derivados
+│   ├── procesados/             # Dataset maestro integrado y datasets derivados
+│   └── geo/                    # Geometría municipal simplificada (MGN 2018)
+│       └── municipios_colombia_simplificado.geojson  # ✅ 3,8 MB
 ├── notebooks/
 │   ├── figuras/                # Figuras reutilizables (Streamlit + memoria)
 │   ├── 01_preprocesamiento.ipynb       # ✅ Integración de fuentes → dataset maestro
@@ -99,6 +101,11 @@ tfm-electoral-colombia/
 │   ├── preprocesamiento.py     # ✅ Funciones de integración y limpieza de datos
 │   ├── agregacion_2022.py      # ✅ Agrega datos de 2022 de mesa a municipio
 │   ├── filtrar_victimas.py     # ✅ Filtra el fichero de víctimas (2,5GB → manejable)
+│   ├── integrar_nbi.py         # ✅ Integra NBI 2005/2018 al panel electoral
+│   ├── integrar_victimas.py    # ✅ Integra PER_OCU (conflicto) al panel electoral
+│   ├── integrar_geometria.py   # ✅ Geometría municipal MGN 2018 (dissolve + simplificación)
+│   ├── verificar_calidad_y_finalizar.py  # ✅ Verificación de calidad del dataset maestro
+│   ├── eda_utils.py            # ✅ Funciones auxiliares del EDA
 │   ├── modelo.py               # ✅ Funciones de modelización: ventanas, métricas, modelos
 │   └── utils.py                # Utilidades compartidas
 ├── app/
@@ -172,11 +179,13 @@ en la sección de Datos de la memoria del TFM.
 | NBI Censo 2005 | [DANE](https://www.dane.gov.co/files/censos/resultados/NBI_total_dpto_30_Jun_2012.xls) | Municipio | Censo 2005 | DANE — datos abiertos |
 | NBI Censo 2018 | [DANE](https://www.dane.gov.co/files/censo2018/informacion-tecnica/CNPV-2018-NBI.xlsx) | Municipio | Censo 2018 | DANE — datos abiertos |
 | IPM 2018–2022 | [DANE](https://www.dane.gov.co/files/investigaciones/condiciones_vida/pobreza/2022/anexo_dptal_pobreza_multidimensional_2022.xlsx) | Departamento | 2018–2022 | DANE — datos abiertos |
+| Geometría municipal (MGN 2018, capa Municipio) | [DANE — Geoportal](https://geoportal.dane.gov.co/servicios/descarga-y-metadatos/datos-geoestadisticos/) (descarga manual vía geovisor, sin URL directa) | Municipio | MGN versión 2018 | DANE — datos abiertos |
 
 ### Datos pesados (no versionados en git)
 
-Los ficheros originales de 2022 (nivel mesa) y el fichero de víctimas superan el límite de
-GitHub. Están disponibles en Google Drive con acceso público de lectura:
+Los ficheros originales de 2022 (nivel mesa), el fichero de víctimas y el shapefile crudo del
+MGN superan el límite cómodo de GitHub. Están disponibles en Google Drive con acceso público de
+lectura:
 
 **[Carpeta de datos originales — Google Drive](https://drive.google.com/drive/folders/10MmaVe-ESKJQQPAvStOXWBVO4JbcNVuT?usp=sharing)**
 
@@ -185,6 +194,14 @@ GitHub. Están disponibles en Google Drive con acceso público de lectura:
 | `VICTIMAS_DEPARTAMENTAL.csv` | 2,5 GB | `src/filtrar_victimas.py` | `datos/procesados/VICTIMAS_FILTRADO_V2.csv` |
 | `MMV_NACIONAL_PRESIDENTE_2022_1v.csv` | 131 MB | `src/agregacion_2022.py` | `datos/procesados/` |
 | `MMV_NACIONAL_PRESIDENTE_2022_2v.csv` | 64 MB | `src/agregacion_2022.py` | `datos/procesados/` |
+| `MGN2018_MPIO_POLITICO.rar` (shapefile crudo, MGN 2018, dentro de `shapefile_municipios/`) | 50,3 MB comprimido | `src/integrar_geometria.py` | `datos/geo/municipios_colombia_simplificado.geojson` |
+
+> **Nota sobre el `.rar` del shapefile:** es un respaldo manual para reproducibilidad (por si hace
+> falta reconstruir la geometría desde cero con otro criterio de simplificación), no un insumo que
+> ningún script del repo descargue o descomprima automáticamente. `src/integrar_geometria.py`
+> recibe siempre una ruta local ya descomprimida (`.shp`/`.shx`/`.dbf`/`.prj`) — quien quiera
+> reproducir ese paso necesita descomprimirlo a mano primero (con WinRAR, 7-Zip o `unrar`), igual
+> que se hizo aquí.
 
 ---
 
