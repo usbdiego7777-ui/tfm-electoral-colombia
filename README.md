@@ -68,12 +68,14 @@ sin necesidad de instalación local:
 
 Es una app multi-página (navegación por menú lateral), con tres secciones:
 
-- **Explorador del voto territorial:** mapa interactivo del % de izquierda por municipio y año,
-  evolución temporal 2006-2022 (curva "V"), relación NBI-voto por región con selector de filtro.
+- **Explorador territorial** (`app/Explorador_territorial.py`, página de entrada): tres pestañas
+  — mapa interactivo del % de izquierda por municipio y año (sobre mapa base real, con zoom y
+  desplazamiento), evolución temporal 2006-2022 (curva "V"), y relación NBI-voto por región con
+  selector de filtro.
 - **Predicción y análisis individual:** selecciona departamento, municipio y año — muestra el
   voto real, el voto que predice la trayectoria histórica del municipio, y la desviación entre
   ambos con un indicador visual (verde/naranja/rojo según la magnitud).
-- **Municipios que rompen su tendencia:** dos mapas de residuos de 2022 (absoluto y centrado
+- **Rompen su tendencia:** dos mapas de residuos de 2022 (absoluto y centrado
   respecto a la ola nacional) y tabla de los 20 municipios con mayor desviación. Filtrado por
   fiabilidad estadística — los municipios con menos de 30 votos no compiten en el ranking.
 
@@ -114,11 +116,11 @@ tfm-electoral-colombia/
 │   ├── modelo.py               # ✅ Funciones de modelización: ventanas, métricas, modelos
 │   └── utils.py                # Utilidades compartidas
 ├── app/                         # ✅ Aplicación Streamlit — desplegada
-│   ├── streamlit_app.py         # Página 1: explorador del voto territorial
+│   ├── Explorador_territorial.py   # Página 1 (entrada) — 3 pestañas: mapa, evolución, NBI-voto
 │   ├── data_utils.py            # Carga de datos y estilo, compartido entre páginas
 │   └── pages/
 │       ├── 2_Prediccion_y_analisis_individual.py
-│       └── 3_Municipios_que_rompen_su_tendencia.py
+│       └── 3_Rompen_su_tendencia.py
 ├── modelos/                      # No aplica — la app consume datos precalculados
 │                                  # (tabla_residuos.csv), no necesita modelo serializado
 └── memoria/
@@ -181,7 +183,7 @@ de entorno `TFM_BASE_DIR`.
 ### Lanzar la aplicación web (local)
 
 ```bash
-streamlit run app/streamlit_app.py
+streamlit run app/Explorador_territorial.py
 ```
 
 Streamlit detecta automáticamente `app/pages/` y añade las Páginas 2 y 3 al menú lateral — no

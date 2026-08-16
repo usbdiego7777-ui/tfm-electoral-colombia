@@ -24,7 +24,7 @@ RUTA_TABLA_RESIDUOS = os.path.join(BASE_DIR, "datos", "procesados", "tabla_resid
 
 COLORES_REGION = {
     "Andina": "#1B4965",
-    "Caribe": "#E8871E",
+    "Caribe": "#F1C40F",
     "Pacifica": "#C0392B",
     "Orinoquia": "#27AE60",
     "Amazonia": "#9B2FAE",
@@ -57,6 +57,11 @@ def aplicar_estilo():
             div[data-testid="stMetricValue"] { font-size: 1.7rem; }
             div[data-testid="stSelectbox"] label,
             div[data-testid="stMultiSelect"] label { font-weight: 600; }
+            /* Menú lateral más estrecho (sigue visible y desplegado por defecto — no se
+               oculta) para devolver espacio horizontal al contenido principal. El ancho
+               por defecto de Streamlit (~336px) es más de lo que necesitan tres nombres
+               de página cortos. */
+            section[data-testid="stSidebar"] { min-width: 280px; max-width: 280px; }
         </style>
         """,
         unsafe_allow_html=True,
