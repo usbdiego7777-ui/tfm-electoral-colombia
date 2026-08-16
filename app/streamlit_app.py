@@ -1,16 +1,13 @@
 """
-App Streamlit — TFM Electoral Colombia.
+App Streamlit — TFM Electoral Colombia. Punto de entrada = Página 1.
 
 Página 1 — Explorador del voto territorial:
   1. Mapa coroplético interactivo del % de voto de izquierda por municipio y año.
   2. Evolución temporal nacional 2006-2022 (hallazgo 1: la curva "V").
   3. Relación NBI-voto que cambia de signo por región (hallazgo 2: falacia ecológica).
 
-La app consume, nunca recalcula: todo sale directamente de datos/procesados/ y datos/geo/.
+Las Páginas 2 y 3 viven en app/pages/ (navegación automática de Streamlit, menú lateral).
 """
-
-import os
-import json
 
 import numpy as np
 import pandas as pd
@@ -18,47 +15,17 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-# -----------------------------------------------------------------------
-# Configuración — sin rutas locales hardcodeadas
-# -----------------------------------------------------------------------
-BASE_DIR = os.environ.get("TFM_BASE_DIR", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-RUTA_DATASET_MAESTRO = os.path.join(BASE_DIR, "datos", "procesados", "dataset_maestro_electoral.csv")
-RUTA_GEOJSON = os.path.join(BASE_DIR, "datos", "geo", "municipios_colombia_simplificado.geojson")
+from data_utils import (
+    cargar_dataset_maestro,
+    cargar_geometria_municipal,
+    COLORES_REGION,
+)
 
 st.set_page_config(page_title="TFM Electoral Colombia", layout="wide")
 
-COLORES_REGION = {
-    "Andina": "#4C72B0",
-    "Caribe": "#DD8452",
-    "Pacifica": "#C44E52",
-    "Orinoquia": "#55A868",
-    "Amazonia": "#8172B2",
-    "Insular": "#937860",
-}
-
-
-# -----------------------------------------------------------------------
-# Carga de datos cacheada — obligatoria desde la primera versión funcional
-# -----------------------------------------------------------------------
-@st.cache_data
-def cargar_dataset_maestro() -> pd.DataFrame:
-    """Carga el dataset maestro electoral ya procesado (Fase 1)."""
-    return pd.read_csv(RUTA_DATASET_MAESTRO, dtype={"divipola": str})
-
 
 @st.cache_data
-def cargar_geometria_municipal() -> dict:
-    """
-    Carga el geojson municipal simplificado (Fase 4) y lo devuelve como dict
-    (formato que espera plotly.express.choropleth vía geojson=...).
-    """
-    with open(RUTA_GEOJSON, "r", encoding="utf-8") as f:
-        geojson = json.load(f)
-    return geojson
-
-
-@st.cache_data
-def calcular_evolucion_nacional(df: pd.DataFrame) -> pd.DataFrame:
+def calcular_evolucion_nacional(df):
     """
     % de voto de izquierda nacional por año, ponderado por votos_validos.
     Reproduce la curva "V" ya documentada en Fase 2 (22.6/9.3/16.2/25.7/41.2).
