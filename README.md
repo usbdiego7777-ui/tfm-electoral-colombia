@@ -64,7 +64,7 @@ cambio político genuino — no una prueba de coacción o fraude.
 La aplicación está desplegada en Streamlit Cloud y accesible directamente desde el navegador,
 sin necesidad de instalación local:
 
-**🔗 [tfm-electoral-colombia-1977.streamlit.app](https://tfm-electoral-colombia-1977.streamlit.app)**
+**🔗 [tfm-electoral-colombia-2026.streamlit.app](https://tfm-electoral-colombia-2026.streamlit.app)**
 
 Es una app multi-página (navegación por menú lateral), con tres secciones:
 
