@@ -23,12 +23,12 @@ RUTA_GEOJSON = os.path.join(BASE_DIR, "datos", "geo", "municipios_colombia_simpl
 RUTA_TABLA_RESIDUOS = os.path.join(BASE_DIR, "datos", "procesados", "tabla_residuos.csv")
 
 COLORES_REGION = {
-    "Andina": "#4C72B0",
-    "Caribe": "#DD8452",
-    "Pacifica": "#C44E52",
-    "Orinoquia": "#55A868",
-    "Amazonia": "#8172B2",
-    "Insular": "#937860",
+    "Andina": "#1B4965",
+    "Caribe": "#E8871E",
+    "Pacifica": "#C0392B",
+    "Orinoquia": "#27AE60",
+    "Amazonia": "#9B2FAE",
+    "Insular": "#7F8C8D",
 }
 
 # Texto blindado — no reformular en ningún sitio de la app (acordado en Fase 4)
@@ -36,6 +36,31 @@ TEXTO_RESIDUOS_BLINDADO = (
     "Los residuos miden la desviación del voto respecto a la trayectoria histórica del "
     "municipio. No son una prueba de irregularidad."
 )
+
+
+def aplicar_estilo():
+    """
+    Ajustes visuales mínimos, compartidos entre las tres páginas — sin fuentes ni
+    animaciones custom, solo espaciado y bordes consistentes. Llamar justo después de
+    st.set_page_config() en cada página.
+
+    Nota: sin max-width en .block-container a propósito — con layout="wide" y mapas de
+    Colombia (país alto y estrecho), limitar el ancho del contenedor le resta espacio
+    horizontal útil al mapa sin necesidad (detectado al probar en pantalla ancha).
+    """
+    st.markdown(
+        """
+        <style>
+            .block-container { padding-top: 1.3rem; padding-bottom: 3rem; }
+            .block-container h1 { font-size: 1.9rem; margin-bottom: 0.3rem; }
+            .block-container h2 { font-size: 1.4rem; margin-top: 0.6rem; margin-bottom: 0.4rem; }
+            div[data-testid="stMetricValue"] { font-size: 1.7rem; }
+            div[data-testid="stSelectbox"] label,
+            div[data-testid="stMultiSelect"] label { font-weight: 600; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 @st.cache_data

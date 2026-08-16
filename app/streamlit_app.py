@@ -16,12 +16,14 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from data_utils import (
+    aplicar_estilo,
     cargar_dataset_maestro,
     cargar_geometria_municipal,
     COLORES_REGION,
 )
 
 st.set_page_config(page_title="TFM Electoral Colombia", layout="wide")
+aplicar_estilo()
 
 
 @st.cache_data
@@ -42,10 +44,10 @@ def calcular_evolucion_nacional(df):
 # Cuerpo de la app
 # -----------------------------------------------------------------------
 st.title("TFM — Análisis del comportamiento electoral territorial en Colombia")
-st.caption(
-    "Inercia, pobreza y regionalización del voto de izquierda a nivel municipal (2006–2022). "
+st.markdown(
+    "*Inercia, pobreza y regionalización del voto de izquierda a nivel municipal (2006–2022). "
     "Herramienta de comprensión del voto territorial para analistas, investigadores y "
-    "periodistas de datos."
+    "periodistas de datos.*"
 )
 
 df_maestro = cargar_dataset_maestro()
@@ -56,32 +58,44 @@ geojson_municipios = cargar_geometria_municipal()
 # =========================================================================
 st.header("1. El voto de izquierda por municipio")
 
-anios_disponibles = sorted(df_maestro["ano"].unique())
-anio_seleccionado = st.selectbox(
-    "Año",
-    anios_disponibles,
-    index=anios_disponibles.index(2022) if 2022 in anios_disponibles else len(anios_disponibles) - 1,
-)
+with st.container(border=True):
+    col_info, col_mapa = st.columns([1, 2.2])
 
-df_anio = df_maestro[df_maestro["ano"] == anio_seleccionado].copy()
+    with col_info:
+        anios_disponibles = sorted(df_maestro["ano"].unique())
+        anio_seleccionado = st.selectbox(
+            "Año",
+            anios_disponibles,
+            index=anios_disponibles.index(2022) if 2022 in anios_disponibles else len(anios_disponibles) - 1,
+        )
 
-fig_mapa = px.choropleth(
-    df_anio,
-    geojson=geojson_municipios,
-    locations="divipola",
-    featureidkey="properties.divipola",
-    color="pct_izquierda",
-    color_continuous_scale="RdBu_r",
-    range_color=(0, 100),
-    hover_name="municipio",
-    hover_data={"departamento": True, "pct_izquierda": ":.1f", "divipola": False},
-    labels={"pct_izquierda": "% voto izquierda"},
-)
-fig_mapa.update_geos(fitbounds="locations", visible=False)
-fig_mapa.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0}, height=600)
+        df_anio = df_maestro[df_maestro["ano"] == anio_seleccionado].copy()
 
-st.plotly_chart(fig_mapa, use_container_width=True)
-st.caption(f"{len(df_anio)} municipios con dato en {anio_seleccionado}.")
+        st.markdown("**Cómo leer el mapa**")
+        st.markdown(
+            "- 🔴 Rojo → mayor % de voto de izquierda\n"
+            "- 🔵 Azul → menor % de voto de izquierda\n"
+            "- Pasa el cursor sobre un municipio para ver el dato exacto"
+        )
+        st.caption(f"{len(df_anio)} municipios con dato en {anio_seleccionado}.")
+
+    with col_mapa:
+        fig_mapa = px.choropleth(
+            df_anio,
+            geojson=geojson_municipios,
+            locations="divipola",
+            featureidkey="properties.divipola",
+            color="pct_izquierda",
+            color_continuous_scale="RdBu_r",
+            range_color=(0, 100),
+            hover_name="municipio",
+            hover_data={"departamento": True, "pct_izquierda": ":.1f", "divipola": False},
+            labels={"pct_izquierda": "% voto izquierda"},
+        )
+        fig_mapa.update_geos(fitbounds="locations", visible=False)
+        fig_mapa.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0}, height=630)
+
+        st.plotly_chart(fig_mapa, use_container_width=True)
 
 st.divider()
 
@@ -90,35 +104,36 @@ st.divider()
 # =========================================================================
 st.header("2. Evolución nacional del voto de izquierda")
 
-df_evolucion = calcular_evolucion_nacional(df_maestro[df_maestro["ano"] >= 2006])
+with st.container(border=True):
+    df_evolucion = calcular_evolucion_nacional(df_maestro[df_maestro["ano"] >= 2006])
 
-fig_evolucion = go.Figure()
-fig_evolucion.add_trace(
-    go.Scatter(
-        x=df_evolucion["ano"],
-        y=df_evolucion["pct_izquierda_nacional"],
-        mode="lines+markers+text",
-        text=[f"{v:.1f}%" for v in df_evolucion["pct_izquierda_nacional"]],
-        textposition="top center",
-        line=dict(width=3),
-        marker=dict(size=10),
+    fig_evolucion = go.Figure()
+    fig_evolucion.add_trace(
+        go.Scatter(
+            x=df_evolucion["ano"],
+            y=df_evolucion["pct_izquierda_nacional"],
+            mode="lines+markers+text",
+            text=[f"{v:.1f}%" for v in df_evolucion["pct_izquierda_nacional"]],
+            textposition="top center",
+            line=dict(width=3),
+            marker=dict(size=10),
+        )
     )
-)
-fig_evolucion.update_layout(
-    xaxis_title="Año",
-    yaxis_title="% voto izquierda (ponderado por votos_validos)",
-    xaxis=dict(tickmode="array", tickvals=df_evolucion["ano"]),
-    height=420,
-    margin={"t": 30},
-)
+    fig_evolucion.update_layout(
+        xaxis_title="Año",
+        yaxis_title="% voto izquierda (ponderado por votos_validos)",
+        xaxis=dict(tickmode="array", tickvals=df_evolucion["ano"]),
+        height=420,
+        margin={"t": 30},
+    )
 
-st.plotly_chart(fig_evolucion, use_container_width=True)
-st.markdown(
-    "**Hallazgo 1 — la inercia electoral es el predictor dominante.** El voto municipal se "
-    "explica sobre todo por cómo votó ese municipio en la elección anterior. La curva nacional "
-    "muestra una caída fuerte en 2010, seguida de un ascenso sostenido hasta el 41,2% de 2022, "
-    "coincidiendo con el ascenso político de Petro."
-)
+    st.plotly_chart(fig_evolucion, use_container_width=True)
+    st.markdown(
+        "**Hallazgo 1 — la inercia electoral es el predictor dominante.** El voto municipal se "
+        "explica sobre todo por cómo votó ese municipio en la elección anterior. La curva nacional "
+        "muestra una caída fuerte en 2010, seguida de un ascenso sostenido hasta el 41,2% de 2022, "
+        "coincidiendo con el ascenso político de Petro."
+    )
 
 st.divider()
 
@@ -127,71 +142,76 @@ st.divider()
 # =========================================================================
 st.header("3. La relación entre pobreza (NBI) y voto de izquierda — heterogénea por región")
 
-df_modelado = df_maestro[df_maestro["valido_para_modelado"] == 1].copy()
+with st.container(border=True):
+    df_modelado = df_maestro[df_maestro["valido_para_modelado"] == 1].copy()
+    regiones_disponibles = sorted(df_modelado["region_dane"].dropna().unique())
 
-regiones_disponibles = sorted(df_modelado["region_dane"].dropna().unique())
-regiones_seleccionadas = st.multiselect(
-    "Filtrar por región (DANE)",
-    regiones_disponibles,
-    default=regiones_disponibles,
-)
+    col_chart, col_side = st.columns([2, 1])
 
-df_nbi = df_modelado[df_modelado["region_dane"].isin(regiones_seleccionadas)]
-
-fig_nbi = go.Figure()
-for region in regiones_seleccionadas:
-    sub = df_nbi[df_nbi["region_dane"] == region]
-    color = COLORES_REGION.get(region, "#333333")
-    fig_nbi.add_trace(
-        go.Scatter(
-            x=sub["nbi_total"],
-            y=sub["pct_izquierda"],
-            mode="markers",
-            name=region,
-            marker=dict(size=5, opacity=0.45, color=color),
-            legendgroup=region,
+    with col_chart:
+        regiones_seleccionadas = st.multiselect(
+            "Filtrar por región (DANE)",
+            regiones_disponibles,
+            default=regiones_disponibles,
         )
-    )
-    # Línea de tendencia manual (ajuste lineal simple, sin dependencias nuevas)
-    if len(sub) >= 5:
-        coeficientes = np.polyfit(sub["nbi_total"], sub["pct_izquierda"], 1)
-        x_linea = np.linspace(sub["nbi_total"].min(), sub["nbi_total"].max(), 50)
-        y_linea = np.polyval(coeficientes, x_linea)
-        fig_nbi.add_trace(
-            go.Scatter(
-                x=x_linea,
-                y=y_linea,
-                mode="lines",
-                line=dict(width=3, color=color),
-                showlegend=False,
-                legendgroup=region,
-                hoverinfo="skip",
+
+        df_nbi = df_modelado[df_modelado["region_dane"].isin(regiones_seleccionadas)]
+
+        fig_nbi = go.Figure()
+        for region in regiones_seleccionadas:
+            sub = df_nbi[df_nbi["region_dane"] == region]
+            color = COLORES_REGION.get(region, "#333333")
+            fig_nbi.add_trace(
+                go.Scatter(
+                    x=sub["nbi_total"],
+                    y=sub["pct_izquierda"],
+                    mode="markers",
+                    name=region,
+                    marker=dict(size=5, opacity=0.45, color=color),
+                    legendgroup=region,
+                )
             )
+            # Línea de tendencia manual (ajuste lineal simple, sin dependencias nuevas)
+            if len(sub) >= 5:
+                coeficientes = np.polyfit(sub["nbi_total"], sub["pct_izquierda"], 1)
+                x_linea = np.linspace(sub["nbi_total"].min(), sub["nbi_total"].max(), 50)
+                y_linea = np.polyval(coeficientes, x_linea)
+                fig_nbi.add_trace(
+                    go.Scatter(
+                        x=x_linea,
+                        y=y_linea,
+                        mode="lines",
+                        line=dict(width=3, color=color),
+                        showlegend=False,
+                        legendgroup=region,
+                        hoverinfo="skip",
+                    )
+                )
+
+        fig_nbi.update_layout(
+            xaxis_title="NBI total (% población con necesidades básicas insatisfechas)",
+            yaxis_title="% voto izquierda",
+            height=480,
+            legend_title="Región (DANE)",
+            margin={"t": 30},
         )
 
-fig_nbi.update_layout(
-    xaxis_title="NBI total (% población con necesidades básicas insatisfechas)",
-    yaxis_title="% voto izquierda",
-    height=520,
-    legend_title="Región (DANE)",
-    margin={"t": 30},
-)
+        st.plotly_chart(fig_nbi, use_container_width=True)
 
-st.plotly_chart(fig_nbi, use_container_width=True)
-
-with st.expander("Correlación NBI-voto por región (valores exactos)"):
-    tabla_corr = (
-        df_nbi.groupby("region_dane")
-        .apply(lambda g: g["nbi_total"].corr(g["pct_izquierda"]))
-        .reset_index(name="correlacion")
-        .sort_values("correlacion")
-    )
-    st.dataframe(tabla_corr, use_container_width=True, hide_index=True)
-
-st.markdown(
-    "**Hallazgo 2 — falacia ecológica.** La correlación global entre pobreza y voto de "
-    "izquierda es casi nula (~0,03), pero es el promedio de dos señales reales que se cancelan: "
-    "**negativa** en la región Andina y Caribe, y **positiva** en la periferia (Orinoquía, "
-    "frontera). Un mismo nivel de NBI puede acompañar más voto de izquierda en una región y "
-    "menos en otra — por eso la relación nacional no dice casi nada por sí sola."
-)
+    with col_side:
+        st.markdown(
+            "**Hallazgo 2 — falacia ecológica.** La correlación global entre pobreza y voto de "
+            "izquierda es casi nula (~0,03), pero es el promedio de dos señales reales que se "
+            "cancelan: **negativa** en la región Andina y Caribe, y **positiva** en la periferia "
+            "(Orinoquía, frontera). Un mismo nivel de NBI puede acompañar más voto de izquierda "
+            "en una región y menos en otra — por eso la relación nacional no dice casi nada por "
+            "sí sola."
+        )
+        with st.expander("Correlación exacta por región"):
+            tabla_corr = (
+                df_nbi.groupby("region_dane")
+                .apply(lambda g: g["nbi_total"].corr(g["pct_izquierda"]))
+                .reset_index(name="correlacion")
+                .sort_values("correlacion")
+            )
+            st.dataframe(tabla_corr, use_container_width=True, hide_index=True)
