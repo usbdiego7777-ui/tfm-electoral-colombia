@@ -64,16 +64,21 @@ cambio político genuino — no una prueba de coacción o fraude.
 La aplicación está desplegada en Streamlit Cloud y accesible directamente desde el navegador,
 sin necesidad de instalación local:
 
-**🔗 [Enlace a la app — pendiente de despliegue]**
+**🔗 [tfm-electoral-colombia-1977.streamlit.app](https://tfm-electoral-colombia-1977.streamlit.app)**
 
-La app tiene tres secciones:
+Es una app multi-página (navegación por menú lateral), con tres secciones:
 
 - **Explorador del voto territorial:** mapa interactivo del % de izquierda por municipio y año,
-  evolución temporal 2006-2022, relación NBI-voto por región.
-- **Análisis individual:** selecciona un municipio y año — ve el voto real, el voto predicho
-  por el modelo y la desviación respecto a su trayectoria histórica.
-- **Municipios que rompen su tendencia:** mapa de residuos del modelo en 2022, filtrado por
-  fiabilidad estadística. Los municipios con menos de 30 votos no se muestran como señal.
+  evolución temporal 2006-2022 (curva "V"), relación NBI-voto por región con selector de filtro.
+- **Predicción y análisis individual:** selecciona departamento, municipio y año — muestra el
+  voto real, el voto que predice la trayectoria histórica del municipio, y la desviación entre
+  ambos con un indicador visual (verde/naranja/rojo según la magnitud).
+- **Municipios que rompen su tendencia:** dos mapas de residuos de 2022 (absoluto y centrado
+  respecto a la ola nacional) y tabla de los 20 municipios con mayor desviación. Filtrado por
+  fiabilidad estadística — los municipios con menos de 30 votos no compiten en el ranking.
+
+La app consume directamente los datos ya procesados (`datos/procesados/`), nunca recalcula nada
+en caliente — no requiere ni usa ningún modelo serializado.
 
 ---
 
@@ -86,17 +91,17 @@ tfm-electoral-colombia/
 ├── .gitignore
 ├── datos/
 │   ├── raw/                    # Datos originales livianos (versionados en git)
-│   ├── procesados/             # Dataset maestro integrado y datasets derivados
+│   ├── procesados/             # Dataset maestro, tabla de residuos y datasets derivados
 │   └── geo/                    # Geometría municipal simplificada (MGN 2018)
 │       └── municipios_colombia_simplificado.geojson  # ✅ 3,8 MB
 ├── notebooks/
 │   ├── figuras/                # Figuras reutilizables (Streamlit + memoria)
-│   ├── 01_preprocesamiento.ipynb       # ✅ Integración de fuentes → dataset maestro
-│   ├── 02_eda.ipynb                    # ✅ Análisis exploratorio
-│   ├── 03_modelizacion.ipynb           # ✅ Pipeline predictivo: ventana expansiva
+│   ├── 01_preprocesamiento.ipynb        # ✅ Integración de fuentes → dataset maestro
+│   ├── 02_eda.ipynb                     # ✅ Análisis exploratorio
+│   ├── 03_modelizacion.ipynb            # ✅ Pipeline predictivo: ventana expansiva
 │   ├── 03b_experimentos_decisivos.ipynb # ✅ Conflicto vs. pobreza/región
-│   ├── 04_residuos_y_anomalias.ipynb   # 🔄 En desarrollo
-│   └── 05_productivizacion.ipynb       # 🔄 En desarrollo
+│   ├── 04_residuos_y_anomalias.ipynb    # ✅ Residuos + mapas coropléticos (memoria)
+│   └── 05_productivizacion.ipynb        # No aplica — ver nota abajo
 ├── src/
 │   ├── preprocesamiento.py     # ✅ Funciones de integración y limpieza de datos
 │   ├── agregacion_2022.py      # ✅ Agrega datos de 2022 de mesa a municipio
@@ -108,13 +113,25 @@ tfm-electoral-colombia/
 │   ├── eda_utils.py            # ✅ Funciones auxiliares del EDA
 │   ├── modelo.py               # ✅ Funciones de modelización: ventanas, métricas, modelos
 │   └── utils.py                # Utilidades compartidas
-├── app/
-│   └── streamlit_app.py        # 🔄 En desarrollo
-├── modelos/
-│   └── modelo_final.pkl        # 🔄 Pendiente (se genera en fase de productivización)
+├── app/                         # ✅ Aplicación Streamlit — desplegada
+│   ├── streamlit_app.py         # Página 1: explorador del voto territorial
+│   ├── data_utils.py            # Carga de datos y estilo, compartido entre páginas
+│   └── pages/
+│       ├── 2_Prediccion_y_analisis_individual.py
+│       └── 3_Municipios_que_rompen_su_tendencia.py
+├── modelos/                      # No aplica — la app consume datos precalculados
+│                                  # (tabla_residuos.csv), no necesita modelo serializado
 └── memoria/
-    └── TFM_Diego_Abella.pdf
+    └── TFM_Diego_Abella.pdf     # 🔄 Pendiente
 ```
+
+> **Nota sobre `05_productivizacion.ipynb` y `modelos/`:** el diseño original de la app preveía
+> serializar un modelo en `modelos/modelo_final.pkl` para hacer predicciones en vivo. Al construir
+> la app se confirmó que las tres páginas se apoyan enteramente en datos ya precalculados
+> (`dataset_maestro_electoral.csv` y `tabla_residuos.csv`, ambos generados en fases anteriores) —
+> no hay ningún flujo de predicción en tiempo real que requiera cargar un modelo. Por eso el
+> notebook `05` y la carpeta `modelos/` no se usan; la productivización vive directamente en
+> `app/`.
 
 ---
 
@@ -138,13 +155,16 @@ El proyecto no usa rutas locales hardcodeadas. Cada notebook define al inicio:
 BASE_DIR = ".."  # Raíz del proyecto — ajustar solo si se ejecuta desde otra ubicación
 ```
 
+La app de Streamlit calcula `BASE_DIR` automáticamente a partir de la ubicación de
+`app/data_utils.py` (ver ese fichero) — no requiere configuración manual salvo que se despliegue
+en un entorno con una estructura de carpetas distinta, en cuyo caso puede fijarse con la variable
+de entorno `TFM_BASE_DIR`.
+
 ### Orden de ejecución de los notebooks
 
 > ⚠️ **Importante:** los notebooks usan rutas relativas con `BASE_DIR = '..'`
 > y **deben ejecutarse desde la carpeta `notebooks/`**, no desde la raíz del proyecto.
 > Si se abren desde otro directorio, ajustar `BASE_DIR` al principio de cada notebook.
-
-Los notebooks deben ejecutarse en este orden:
 
 | Orden | Notebook | Estado | Descripción |
 |-------|----------|--------|-------------|
@@ -152,8 +172,8 @@ Los notebooks deben ejecutarse en este orden:
 | 2 | `02_eda.ipynb` | ✅ Completado | Análisis exploratorio: distribución, correlaciones, regionalización |
 | 3 | `03_modelizacion.ipynb` | ✅ Completado | Pipeline predictivo con ventana expansiva temporal |
 | 3b | `03b_experimentos_decisivos.ipynb` | ✅ Completado | Experimentos conflicto vs. pobreza/región (*) |
-| 4 | `04_residuos_y_anomalias.ipynb` | 🔄 En desarrollo | Análisis de residuos y mapa de municipios |
-| 5 | `05_productivizacion.ipynb` | 🔄 En desarrollo | Serializa el modelo final en `modelos/modelo_final.pkl` |
+| 4 | `04_residuos_y_anomalias.ipynb` | ✅ Completado | Residuos, tabla de residuos y mapas coropléticos de la memoria |
+| 5 | `05_productivizacion.ipynb` | No aplica | Ver nota en la sección 3 — la productivización vive en `app/` |
 
 (*) `03b` no depende de ningún fichero generado por `03` — ambos cargan directamente
 `datos/procesados/dataset_maestro_electoral.csv`. El orden 3→3b es narrativo, no técnico.
@@ -163,6 +183,9 @@ Los notebooks deben ejecutarse en este orden:
 ```bash
 streamlit run app/streamlit_app.py
 ```
+
+Streamlit detecta automáticamente `app/pages/` y añade las Páginas 2 y 3 al menú lateral — no
+hace falta lanzar cada página por separado.
 
 ---
 
@@ -249,8 +272,8 @@ de pobreza + región:
   amplificada por el ascenso político de Petro (2018-2022)
 
 ### Interpretabilidad
-SHAP + análisis de residuos del modelo con lag + mapa coroplético de municipios que rompen
-su tendencia histórica
+SHAP + análisis de residuos del modelo con lag + mapas coropléticos interactivos de municipios
+que rompen su tendencia histórica (app Streamlit, sección 3)
 
 ---
 
