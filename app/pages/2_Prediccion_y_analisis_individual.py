@@ -9,14 +9,10 @@ de ninguna ventana, no aparece en tabla_residuos.csv — se muestra solo el voto
 import streamlit as st
 
 from data_utils import (
-    aplicar_estilo,
     cargar_dataset_maestro,
     cargar_tabla_residuos,
     TEXTO_RESIDUOS_BLINDADO,
 )
-
-st.set_page_config(page_title="Predicción y análisis individual — TFM Electoral Colombia", layout="wide")
-aplicar_estilo()
 
 st.title("2. Predicción y análisis individual")
 st.caption(
@@ -111,7 +107,13 @@ with st.container(border=True):
             col1, col2, col3 = st.columns(3)
             col1.metric("Voto real", f"{voto_real:.1f}%")
             col2.metric("Voto predicho por su historia", f"{voto_predicho:.1f}%")
-            col3.metric("Residuo", f"{residuo:+.1f} pts")
+            col3.metric(
+                "Residuo",
+                f"{residuo:+.1f} pts",
+                help="La diferencia entre lo que votó el municipio y lo que predice su propia "
+                "trayectoria histórica. No es una prueba de irregularidad, es una señal de "
+                "cambio político.",
+            )
 
             # Indicador visual — umbrales verificados contra la distribución real de
             # |residuo| en municipios de confiabilidad normal: <10 (~40% de los casos),
