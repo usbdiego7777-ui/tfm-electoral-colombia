@@ -19,6 +19,13 @@ st.caption(
     "Consulta un municipio y un año concretos: voto real, voto que predice su propia "
     "trayectoria histórica, y la diferencia entre ambos."
 )
+st.info(
+    "Este modelo se basa principalmente en la propia historia electoral del municipio. Su "
+    "correlación con el resultado real es de ~0,54 a nivel nacional — fuerte, pero lejos de "
+    "perfecta (ver pestaña **Inercia electoral** en Explorador territorial). Desviaciones "
+    "grandes en municipios concretos no son un fallo del modelo: son justamente los casos que "
+    "este análisis busca señalar."
+)
 
 df_maestro = cargar_dataset_maestro()
 df_residuos = cargar_tabla_residuos()
