@@ -67,17 +67,24 @@ sin necesidad de instalación local:
 
 **🔗 [tfm-electoral-colombia-2026.streamlit.app](https://tfm-electoral-colombia-2026.streamlit.app)**
 
-Es una app multi-página (navegación por menú lateral), con tres secciones:
+Es una app multi-página (navegación por menú lateral construido a mano, con el subtítulo de la
+app justo encima), con tres secciones:
 
-- **Explorador territorial** (`app/Explorador_territorial.py`, página de entrada): tres pestañas
-  — mapa interactivo del % de izquierda por municipio y año (sobre mapa base real, con zoom y
-  desplazamiento), evolución temporal 2006-2022 (curva "V"), y relación NBI-voto por región con
-  selector de filtro.
+- **Explorador territorial** (`app/Explorador_territorial.py` como enrutador,
+  `app/pagina1_explorador.py` con el contenido, página de entrada): cuatro pestañas — mapa
+  interactivo del % de izquierda por municipio y año (sobre mapa base real, con zoom y
+  desplazamiento, y marca gris para municipios de baja confiabilidad electoral), evolución
+  temporal nacional 2006-2022 (curva "V", contexto agregado), inercia electoral a nivel
+  municipio (correlación lag-voto ~0,54, la evidencia real del hallazgo 1), y relación NBI-voto
+  por región con selector de filtro.
 - **Predicción y análisis individual:** selecciona departamento, municipio y año — muestra el
   voto real, el voto que predice la trayectoria histórica del municipio, y la desviación entre
-  ambos con un indicador visual (verde/naranja/rojo según la magnitud).
-- **Rompen su tendencia:** dos mapas de residuos de 2022 (absoluto y centrado
-  respecto a la ola nacional) y tabla de los 20 municipios con mayor desviación. Filtrado por
+  ambos con un indicador visual (verde/naranja/rojo según la magnitud). Incluye una nota sobre
+  la correlación lag-voto nacional (~0,54) para contextualizar que desviaciones grandes son
+  esperables, no un fallo del modelo.
+- **Rompen su tendencia:** dos mapas de residuos de 2022 (absoluto y centrado respecto a la ola
+  nacional), cada uno en su propia pestaña con el mismo layout que el Explorador territorial, y
+  tabla de los 20 municipios con mayor desviación compartida fuera de las pestañas. Filtrado por
   fiabilidad estadística — los municipios con menos de 30 votos no compiten en el ranking.
 
 La app consume directamente los datos ya procesados (`datos/procesados/`), nunca recalcula nada
@@ -117,11 +124,12 @@ tfm-electoral-colombia/
 │   ├── modelo.py               # ✅ Funciones de modelización: ventanas, métricas, modelos
 │   └── utils.py                # Utilidades compartidas
 ├── app/                         # ✅ Aplicación Streamlit — desplegada
-│   ├── Explorador_territorial.py   # Página 1 (entrada) — 3 pestañas: mapa, evolución, NBI-voto
+│   ├── Explorador_territorial.py   # Enrutador (st.navigation/st.Page) — punto de entrada
+│   ├── pagina1_explorador.py    # Página 1 — 4 pestañas: mapa, evolución, inercia, NBI-voto
 │   ├── data_utils.py            # Carga de datos y estilo, compartido entre páginas
 │   └── pages/
 │       ├── 2_Prediccion_y_analisis_individual.py
-│       └── 3_Rompen_su_tendencia.py
+│       └── 3_Rompen_su_tendencia.py     # 2 pestañas (mapa absoluto, mapa centrado) + tabla top 20
 ├── modelos/                      # No aplica — la app consume datos precalculados
 │                                  # (tabla_residuos.csv), no necesita modelo serializado
 └── memoria/
