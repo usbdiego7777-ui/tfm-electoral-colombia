@@ -1,7 +1,8 @@
 """
-Contenido de la Página 1 — Explorador territorial (tres pestañas):
+Contenido de la Página 1 — Explorador territorial (cuatro pestañas):
   - Mapa coroplético interactivo del % de voto de izquierda por municipio y año.
-  - Evolución temporal nacional 2006-2022 (hallazgo 1: la curva "V").
+  - Evolución temporal nacional 2006-2022 (contexto: la curva "V").
+  - Inercia electoral a nivel municipio (hallazgo 1: correlación lag-voto ~0,54).
   - Relación NBI-voto que cambia de signo por región (hallazgo 2: falacia ecológica).
 
 Este fichero NO es el punto de entrada de la app — lo es app/Explorador_territorial.py,
@@ -48,8 +49,13 @@ geojson_municipios = cargar_geometria_municipal()
 # Tres pestañas dentro de una sola sección — cada una usa el espacio vertical
 # completo, sin competir por altura con las otras dos.
 # =========================================================================
-tab_mapa, tab_evolucion, tab_nbi = st.tabs(
-    ["🗺️ Mapa por municipio", "📈 Evolución nacional", "📊 Relación NBI-voto"]
+tab_mapa, tab_evolucion, tab_inercia, tab_nbi = st.tabs(
+    [
+        "🗺️ Mapa por municipio",
+        "📈 Evolución nacional",
+        "🔁 Inercia electoral",
+        "📊 Relación NBI-voto",
+    ]
 )
 
 # -------------------------------------------------------------------------
@@ -141,7 +147,7 @@ with tab_mapa:
             st.plotly_chart(fig_mapa, use_container_width=True)
 
 # -------------------------------------------------------------------------
-# Pestaña 2 — Evolución temporal nacional (hallazgo 1: la curva "V")
+# Pestaña 2 — Evolución temporal nacional (contexto: la curva "V")
 # -------------------------------------------------------------------------
 with tab_evolucion:
     with st.container(border=True):
@@ -151,11 +157,11 @@ with tab_evolucion:
 
         with col_info:
             st.markdown(
-                "**Hallazgo 1 — la inercia electoral es el predictor dominante.** El voto "
-                "municipal se explica sobre todo por cómo votó ese municipio en la elección "
-                "anterior. La curva nacional muestra una caída fuerte en 2010, seguida de un "
-                "ascenso sostenido hasta el 41,2% de 2022, coincidiendo con el ascenso "
-                "político de Petro."
+                "**Contexto nacional.** El voto de izquierda a nivel país cae con fuerza en "
+                "2010 y sube de forma sostenida hasta el 41,2% de 2022, coincidiendo con el "
+                "ascenso político de Petro. Esta curva describe la tendencia agregada del "
+                "país, no el comportamiento de cada municipio por separado — para eso, ver "
+                "la pestaña **Inercia electoral**."
             )
 
         with col_evolucion:
@@ -182,7 +188,73 @@ with tab_evolucion:
             st.plotly_chart(fig_evolucion, use_container_width=True)
 
 # -------------------------------------------------------------------------
-# Pestaña 3 — Relación NBI-voto que cambia de signo por región (hallazgo 2)
+# Pestaña 3 — Inercia electoral a nivel municipio (hallazgo 1)
+# -------------------------------------------------------------------------
+with tab_inercia:
+    with st.container(border=True):
+        col_info, col_inercia = st.columns([1, 3])
+
+        df_valido = df_maestro[df_maestro["valido_para_modelado"] == 1].copy()
+        correlacion_lag = df_valido["lag_pct_izquierda"].corr(df_valido["pct_izquierda"])
+
+        with col_info:
+            st.caption(
+                "**¿Qué es el lag?** El % de voto de izquierda que tuvo ese mismo municipio "
+                "en la elección anterior — su propia historia, no la de otro municipio ni el "
+                "promedio nacional."
+            )
+            st.markdown(
+                f"**Hallazgo 1 — la inercia electoral es el predictor dominante.** Cada "
+                f"punto es un municipio en una elección. La correlación entre el voto "
+                f"anterior de un municipio y su voto actual es de **{correlacion_lag:.3f}** "
+                f"— la señal más fuerte de todo el análisis. Un municipio que votó a la "
+                f"izquierda en el pasado tiende a seguir haciéndolo; ningún modelo ajustado "
+                f"supera de forma clara a esta simple regla de \"copiar el resultado "
+                f"anterior\"."
+            )
+
+        with col_inercia:
+            coeficientes = np.polyfit(df_valido["lag_pct_izquierda"], df_valido["pct_izquierda"], 1)
+            x_linea = np.linspace(df_valido["lag_pct_izquierda"].min(), df_valido["lag_pct_izquierda"].max(), 50)
+            y_linea = np.polyval(coeficientes, x_linea)
+
+            fig_inercia = go.Figure()
+            fig_inercia.add_trace(
+                go.Scatter(
+                    x=df_valido["lag_pct_izquierda"],
+                    y=df_valido["pct_izquierda"],
+                    mode="markers",
+                    marker=dict(size=4, opacity=0.35, color="#1B4965"),
+                    name="Municipio-año",
+                    customdata=df_valido[["municipio", "departamento", "ano"]],
+                    hovertemplate=(
+                        "<b>%{customdata[0]} (%{customdata[1]})</b> — %{customdata[2]}<br>"
+                        "Voto anterior: %{x:.1f}%<br>Voto actual: %{y:.1f}%<extra></extra>"
+                    ),
+                )
+            )
+            fig_inercia.add_trace(
+                go.Scatter(
+                    x=x_linea,
+                    y=y_linea,
+                    mode="lines",
+                    line=dict(width=3, color="#C0392B"),
+                    name="Tendencia",
+                    hoverinfo="skip",
+                )
+            )
+            fig_inercia.update_layout(
+                xaxis_title="% voto izquierda — elección anterior (lag)",
+                yaxis_title="% voto izquierda — elección actual",
+                height=700,
+                margin={"t": 30},
+                showlegend=False,
+            )
+
+            st.plotly_chart(fig_inercia, use_container_width=True)
+
+# -------------------------------------------------------------------------
+# Pestaña 4 — Relación NBI-voto que cambia de signo por región (hallazgo 2)
 # -------------------------------------------------------------------------
 with tab_nbi:
     with st.container(border=True):
@@ -208,11 +280,13 @@ with tab_nbi:
             )
             st.markdown(
                 "**Hallazgo 2 — falacia ecológica.** La correlación global entre pobreza y "
-                "voto de izquierda es casi nula (~0,03), pero es el promedio de dos señales "
-                "reales que se cancelan: **negativa** en la región Andina y Caribe, y "
-                "**positiva** en la periferia (Orinoquía, frontera). Un mismo nivel de NBI "
-                "puede acompañar más voto de izquierda en una región y menos en otra — por "
-                "eso la relación nacional no dice casi nada por sí sola."
+                "voto de izquierda es casi nula (~0,03), pero es el promedio de señales "
+                "reales que se cancelan: **negativa** en Andina, Caribe, Pacífica y Amazonía "
+                "(con distinta intensidad), y **positiva únicamente en Orinoquía** — la "
+                "única de las cinco regiones donde más pobreza se asocia con más voto de "
+                "izquierda. Un mismo nivel de NBI puede acompañar más voto de izquierda en "
+                "una región y menos en otra — por eso la relación nacional no dice casi nada "
+                "por sí sola."
             )
             with st.expander("Correlación exacta por región"):
                 tabla_corr = (

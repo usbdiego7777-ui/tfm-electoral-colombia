@@ -35,9 +35,10 @@ científica válida.
    (correlación intra-año).
 
 2. **La relación pobreza–voto es heterogénea y de signo opuesto por región** (falacia ecológica
-   documentada): correlación negativa en la región Andina/Caribe, positiva en
-   frontera/Amazonía-Orinoquía. La correlación global de ~0,03 es el promedio de dos señales
-   reales que se cancelan.
+   documentada): correlación negativa en Andina, Caribe, Pacífica y Amazonía (con distinta
+   intensidad), y positiva únicamente en Orinoquía — la única de las cinco regiones DANE donde
+   más pobreza se asocia con más voto de izquierda. La correlación global de ~0,03 es el
+   promedio de estas señales opuestas que se cancelan entre sí.
 
 3. **El voto de izquierda está fuertemente regionalizado** — el bloque Pacífico/periferia
    explica el 96-99% de lo que NBI+región capturan juntos. Es más regionalización que
