@@ -23,7 +23,7 @@ RUTA_GEOJSON = os.path.join(BASE_DIR, "datos", "geo", "municipios_colombia_simpl
 RUTA_TABLA_RESIDUOS = os.path.join(BASE_DIR, "datos", "procesados", "tabla_residuos.csv")
 
 COLORES_REGION = {
-    "Andina": "#1B4965",
+    "Andina": "#0B2447",
     "Caribe": "#F1C40F",
     "Pacifica": "#C0392B",
     "Orinoquia": "#27AE60",

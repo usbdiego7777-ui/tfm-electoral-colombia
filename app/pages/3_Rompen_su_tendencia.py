@@ -13,14 +13,10 @@ import plotly.express as px
 import streamlit as st
 
 from data_utils import (
-    aplicar_estilo,
     cargar_geometria_municipal,
     cargar_tabla_residuos,
     TEXTO_RESIDUOS_BLINDADO,
 )
-
-st.set_page_config(page_title="Municipios que rompen su tendencia — TFM Electoral Colombia", layout="wide")
-aplicar_estilo()
 
 st.title("3. Municipios que rompen su tendencia (2022)")
 st.caption(
@@ -99,10 +95,12 @@ with st.container(border=True):
 
     st.plotly_chart(fig_centrado, use_container_width=True)
     st.caption(
-        "Una vez descontada la ola nacional, el Pacífico y el sur se movieron por encima de la "
-        "media nacional y el interior andino por debajo. El patrón territorial de la desviación "
-        "coincide con la geografía de la regionalización del voto ya identificada en el EDA: el "
-        "mapa no destapa un fenómeno nuevo, lo confirma con granularidad municipal."
+        "Todo el país se movió hacia la izquierda en 2022; este mapa muestra quién se movió "
+        "más y quién menos que ese promedio nacional. Una vez descontada esa ola, el Pacífico "
+        "y el sur se movieron por encima de la media y el interior andino por debajo. El "
+        "patrón territorial de la desviación coincide con la geografía de la regionalización "
+        "del voto ya identificada en el EDA: el mapa no destapa un fenómeno nuevo, lo confirma "
+        "con granularidad municipal."
     )
 
 st.divider()
