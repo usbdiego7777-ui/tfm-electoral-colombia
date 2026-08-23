@@ -46,8 +46,8 @@ df_maestro = cargar_dataset_maestro()
 geojson_municipios = cargar_geometria_municipal()
 
 # =========================================================================
-# Tres pestañas dentro de una sola sección — cada una usa el espacio vertical
-# completo, sin competir por altura con las otras dos.
+# Cuatro pestañas dentro de una sola sección — cada una usa el espacio vertical
+# completo, sin competir por altura con las demás.
 # =========================================================================
 tab_mapa, tab_evolucion, tab_inercia, tab_nbi = st.tabs(
     [

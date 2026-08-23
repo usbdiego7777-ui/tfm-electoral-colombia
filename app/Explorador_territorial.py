@@ -1,17 +1,14 @@
 """
 Enrutador de la app — TFM Electoral Colombia.
 
-Este es el fichero de entrada (el que se pasa a `streamlit run` y el configurado como
-"Main file path" en Streamlit Cloud). Desde que se usa st.navigation()/st.Page(), este
-fichero deja de contener el contenido de la Página 1 directamente — ese contenido vive en
-app/pagina1_explorador.py. Aquí solo se hace de "marco": configuración global, texto del
-panel lateral (colocado ANTES de declarar la navegación, para que aparezca por encima del
-menú de páginas — al contrario que con la carpeta app/pages/ automática, donde el menú
-siempre se coloca primero sin poder controlarlo), y la lista de páginas disponibles.
+Fichero de entrada (el que se pasa a `streamlit run` y el configurado como "Main file
+path" en Streamlit Cloud). El contenido de la Página 1 vive en app/pagina1_explorador.py;
+aquí solo se hace de "marco": configuración global, texto del panel lateral y la lista de
+páginas disponibles.
 
-Nota: al llamar a st.navigation(), Streamlit deja de usar la detección automática de la
-carpeta app/pages/ — la lista de páginas de abajo es ahora la única fuente de verdad sobre
-qué páginas existen y en qué orden aparecen.
+Al usar st.navigation()/st.Page(), Streamlit deja de detectar automáticamente la carpeta
+app/pages/ — la lista de páginas de abajo pasa a ser la única fuente de verdad sobre qué
+páginas existen y en qué orden aparecen.
 """
 
 import streamlit as st
@@ -38,14 +35,10 @@ pagina_residuos = st.Page(
     icon="📍",
 )
 
-# Menú lateral construido a mano con st.page_link(), en vez de dejar que
-# st.navigation() dibuje su propio widget automático — ese widget se coloca
-# siempre arriba del todo del panel lateral sin importar el orden del código
-# (limitación conocida de Streamlit, confirmada en discuss.streamlit.io/t/
-# st-navigation-menu-is-forced-to-the-top-of-the-sidebar y en el issue
-# streamlit/streamlit#11788, todavía abierto a fecha de este commit). Con
-# position="hidden" se apaga ese widget automático y se controla el orden
-# real: primero el texto, luego el menú.
+# El widget de navegación automático de Streamlit siempre se coloca arriba del todo del
+# panel lateral, sin importar el orden del código, así que el menú se construye a mano
+# con st.page_link() (con position="hidden" para apagar el widget automático) — así el
+# texto de presentación puede ir antes que el menú de páginas.
 with st.sidebar:
     st.markdown(
         "*Inercia, pobreza y regionalización del voto de izquierda a nivel municipal "
