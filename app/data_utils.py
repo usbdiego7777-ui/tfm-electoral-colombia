@@ -4,7 +4,7 @@ Carga de datos compartida entre todas las páginas de la app.
 Centralizado aquí (en vez de repetido en cada página) porque BASE_DIR se calcula de
 forma distinta según la profundidad del fichero que lo importa — este módulo vive
 siempre en app/, así que su propio __file__ da una referencia estable sin importar
-si lo llama app/streamlit_app.py o app/pages/algo.py.
+si lo llama app/Explorador_territorial.py o app/pages/algo.py.
 
 La app consume, nunca recalcula: todo sale directamente de datos/procesados/ y datos/geo/.
 """
