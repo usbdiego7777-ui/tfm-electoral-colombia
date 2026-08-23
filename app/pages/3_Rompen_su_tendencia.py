@@ -141,26 +141,30 @@ st.header("Los 20 municipios con mayor desviación")
 
 with st.container(border=True):
     st.caption(
-        "Ordenados por magnitud del residuo (valor absoluto). Se excluyen los municipios de baja "
-        "confiabilidad electoral (menos de 30 votos emitidos) — no compiten por este ranking."
+        "Ordenados por magnitud del residuo centrado (valor absoluto, descontada la ola "
+        "nacional) — el mismo residuo que usa el mapa del hallazgo principal. Se excluyen los "
+        "municipios de baja confiabilidad electoral (menos de 30 votos emitidos) — no compiten "
+        "por este ranking. El conflicto armado (per_ocu) no se muestra aquí a propósito: ya "
+        "se demostró que no explica estas desviaciones una vez controlado por pobreza y "
+        "región (hallazgo 4) — incluirlo junto al ranking sugeriría visualmente una relación "
+        "que los datos no sostienen."
     )
 
     top20 = (
         df_confiabilidad_normal.reindex(
-            df_confiabilidad_normal["residuo"].abs().sort_values(ascending=False).index
+            df_confiabilidad_normal["residuo_centrado"].abs().sort_values(ascending=False).index
         )
-        .head(20)[["municipio", "departamento", "residuo", "nbi_total", "per_ocu"]]
+        .head(20)[["municipio", "departamento", "residuo_centrado", "nbi_total"]]
         .rename(
             columns={
                 "municipio": "Municipio",
                 "departamento": "Departamento",
-                "residuo": "Residuo (pts)",
+                "residuo_centrado": "Residuo centrado (pts)",
                 "nbi_total": "NBI total",
-                "per_ocu": "Per. ocupada (conflicto, depto.)",
             }
         )
     )
-    top20["Residuo (pts)"] = top20["Residuo (pts)"].round(1)
+    top20["Residuo centrado (pts)"] = top20["Residuo centrado (pts)"].round(1)
     top20["NBI total"] = top20["NBI total"].round(1)
 
     st.dataframe(top20, use_container_width=True, hide_index=True)

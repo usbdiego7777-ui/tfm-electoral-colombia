@@ -269,6 +269,10 @@ with tab_nbi:
                 regiones_disponibles,
                 default=regiones_disponibles,
             )
+            st.caption(
+                "Mantén varias regiones seleccionadas para ver el contraste de pendientes — "
+                "es lo que muestra la falacia ecológica."
+            )
 
             df_nbi = df_modelado[df_modelado["region_dane"].isin(regiones_seleccionadas)]
 
