@@ -1,14 +1,9 @@
 """
 Enrutador de la app — TFM Electoral Colombia.
 
-Fichero de entrada (el que se pasa a `streamlit run` y el configurado como "Main file
-path" en Streamlit Cloud). El contenido de la Página 1 vive en app/pagina1_explorador.py;
-aquí solo se hace de "marco": configuración global, texto del panel lateral y la lista de
+Fichero de entrada de `streamlit run` y configurado como main file
+path en Streamlit Cloud. Este py es solo la configuración global, texto del panel lateral y la lista de
 páginas disponibles.
-
-Al usar st.navigation()/st.Page(), Streamlit deja de detectar automáticamente la carpeta
-app/pages/ — la lista de páginas de abajo pasa a ser la única fuente de verdad sobre qué
-páginas existen y en qué orden aparecen.
 """
 
 import streamlit as st
