@@ -1,3 +1,30 @@
+# ==============================================================================
+# filtrar_victimas.py
+# Preprocesamiento de UNA SOLA EJECUCION manual, sobre el fichero crudo de
+# victimas del conflicto armado (UARIV). NO forma parte del pipeline
+# reproducible del proyecto del proyecto ya que por tamano del fichero original, 
+# no sepuede cargar al git(Se ha dejado en el drive del proyecto). 
+#
+# ENTRADA (no versionada en este repo, ver Drive en el README): fichero crudo
+# VICTIMAS_DEPARTAMENTAL.csv, ~2,5 GB, ~11,3M filas. No se sube al repositorio
+# por su peso.
+#
+# PROBLEMA QUE RESUELVE: el fichero crudo apila ~74 cortes mensuales del RUV
+# (una fotografia por mes), lo que multiplicaba el conteo de victimas por ese
+# mismo factor si se sumaba sin filtrar. Este script se queda solo con el
+# corte mas reciente (2026-04-30) antes de agregar por año-departamento,
+# evitando el sobreconteo.
+#
+# SALIDA (SI versionada): datos/procesados/VICTIMAS_FILTRADO_V2.csv (847 filas,
+# año x departamento). Es la que consume src/integrar_victimas.py en el
+# pipeline principal.
+#
+# Las rutas locales de abajo (C:/Users/Bunny/Downloads/...) se dejan tal cual,
+# reflejando que este fue un paso de limpieza puntual sobre el fichero
+# original del autor, no parte del flujo reproducible con BASE_DIR que usa el
+# resto de src/.
+# ==============================================================================
+
 import pandas as pd
 
 cols = ['FECHA_CORTE','COD_ESTADO_DEPTO','ESTADO_DEPTO','VIGENCIA','PER_OCU','PER_DECLA','EVENTOS']
