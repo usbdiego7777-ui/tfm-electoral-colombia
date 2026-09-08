@@ -121,8 +121,7 @@ tfm-electoral-colombia/
 │   ├── integrar_geometria.py   # ✅ Geometría municipal MGN 2018 (dissolve + simplificación)
 │   ├── verificar_calidad_y_finalizar.py  # ✅ Verificación de calidad del dataset maestro
 │   ├── eda_utils.py            # ✅ Funciones auxiliares del EDA
-│   ├── modelo.py               # ✅ Funciones de modelización: ventanas, métricas, modelos
-│   └── utils.py                # Utilidades compartidas
+│   └── modelo.py               # ✅ Funciones de modelización: ventanas, métricas, modelos
 ├── app/                         # ✅ Aplicación Streamlit — desplegada
 │   ├── Explorador_territorial.py   # Enrutador (st.navigation/st.Page) — punto de entrada
 │   ├── pagina1_explorador.py    # Página 1 — 4 pestañas: mapa, evolución, inercia, NBI-voto
@@ -283,7 +282,7 @@ de pobreza + región:
   amplificada por el ascenso político de Petro (2018-2022)
 
 ### Interpretabilidad
-SHAP + análisis de residuos del modelo con lag + mapas coropléticos interactivos de municipios
+Análisis de residuos del modelo con lag + mapas coropléticos interactivos de municipios
 que rompen su tendencia histórica (app Streamlit, sección 3)
 
 ---
