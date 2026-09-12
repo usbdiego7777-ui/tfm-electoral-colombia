@@ -129,19 +129,21 @@ tfm-electoral-colombia/
 │   └── pages/
 │       ├── 2_Prediccion_y_analisis_individual.py
 │       └── 3_Rompen_su_tendencia.py     # 2 pestañas (mapa absoluto, mapa centrado) + tabla top 20
-├── modelos/                      # No aplica — la app consume datos precalculados
-│                                  # (tabla_residuos.csv), no necesita modelo serializado
 └── memoria/
-    └── TFM_Diego_Abella.pdf     # 🔄 Pendiente
+    ├── Diego_Abella_TFM_memoria.pdf    # ✅ Memoria final (cuerpo + anexos)
+    ├── Diego_Abella_TFM_memoria.docx   # ✅ Fuente editable de la memoria
+    ├── TFM_Diego_Abella_video.mp4      # ✅ Video del TFM (5:00)
+    ├── TFM_Diego_Abella_video.pptx     # ✅ Presentación de apoyo del video
+    └── Guion_Video_TFM.docx            # ✅ Guion del video
 ```
 
-> **Nota sobre `05_productivizacion.ipynb` y `modelos/`:** el diseño original de la app preveía
-> serializar un modelo en `modelos/modelo_final.pkl` para hacer predicciones en vivo. Al construir
-> la app se confirmó que las tres páginas se apoyan enteramente en datos ya precalculados
+> **Nota sobre `05_productivizacion.ipynb`:** el diseño original de la app preveía serializar
+> un modelo en un fichero `modelo_final.pkl` para hacer predicciones en vivo. Al construir la app
+> se confirmó que las tres páginas se apoyan enteramente en datos ya precalculados
 > (`dataset_maestro_electoral.csv` y `tabla_residuos.csv`, ambos generados en fases anteriores) —
-> no hay ningún flujo de predicción en tiempo real que requiera cargar un modelo. Por eso el
-> notebook `05` y la carpeta `modelos/` no se usan; la productivización vive directamente en
-> `app/`.
+> no hay ningún flujo de predicción en tiempo real que requiera cargar un modelo. Por eso no se
+> llegó a crear una carpeta de modelos serializados; la productivización vive directamente en
+> `app/`, y el notebook `05` documenta esta decisión.
 
 ---
 
